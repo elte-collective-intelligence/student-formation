@@ -1,0 +1,174 @@
+/usr/local/lib/python3.12/dist-packages/stable_baselines3/common/vec_env/base_vec_env.py:77: UserWarning: The `render_mode` attribute is not defined in your environment. It will be set to None.
+  warnings.warn("The `render_mode` attribute is not defined in your environment. It will be set to None.")
+Using cpu device
+Starting iteration 0...
+[34m[1mwandb[0m: [33mWARNING[0m Found log directory outside of given root_logdir, dropping given root_logdir for event file in /home/peas/Documents/Collective Intelligence/formation-tim/logs/tensorboard/PPO_0
+Logging to /home/peas/Documents/Collective Intelligence/formation-tim/logs/tensorboard/PPO_0
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 1e+03    |
+|    ep_rew_mean     | -150     |
+| time/              |          |
+|    fps             | 2215     |
+|    iterations      | 1        |
+|    time_elapsed    | 9        |
+|    total_timesteps | 20480    |
+---------------------------------
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1e+03        |
+|    ep_rew_mean          | -121         |
+| time/                   |              |
+|    fps                  | 1868         |
+|    iterations           | 2            |
+|    time_elapsed         | 21           |
+|    total_timesteps      | 40960        |
+| train/                  |              |
+|    approx_kl            | 0.0042636446 |
+|    clip_fraction        | 0.0122       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -1.61        |
+|    explained_variance   | 0.0333       |
+|    learning_rate        | 0.0003       |
+|    loss                 | 9.64         |
+|    n_updates            | 10           |
+|    policy_gradient_loss | -0.000921    |
+|    value_loss           | 24.6         |
+------------------------------------------
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1e+03        |
+|    ep_rew_mean          | -108         |
+| time/                   |              |
+|    fps                  | 1782         |
+|    iterations           | 3            |
+|    time_elapsed         | 34           |
+|    total_timesteps      | 61440        |
+| train/                  |              |
+|    approx_kl            | 0.0047108335 |
+|    clip_fraction        | 0.0286       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -1.6         |
+|    explained_variance   | -0.227       |
+|    learning_rate        | 0.0003       |
+|    loss                 | 4.3          |
+|    n_updates            | 20           |
+|    policy_gradient_loss | -0.00174     |
+|    value_loss           | 11.7         |
+------------------------------------------
+[4;33mReloaded modules[24m: src, src.environment, _remote_module_non_scriptable[0m
+/usr/local/lib/python3.12/dist-packages/stable_baselines3/common/vec_env/base_vec_env.py:77: UserWarning: The `render_mode` attribute is not defined in your environment. It will be set to None.
+  warnings.warn("The `render_mode` attribute is not defined in your environment. It will be set to None.")
+Using cpu device
+Starting iteration 0...
+[34m[1mwandb[0m: [33mWARNING[0m Found log directory outside of given root_logdir, dropping given root_logdir for event file in /home/peas/Documents/Collective Intelligence/formation-tim/logs/tensorboard/PPO_0
+Logging to /home/peas/Documents/Collective Intelligence/formation-tim/logs/tensorboard/PPO_0
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 1e+03    |
+|    ep_rew_mean     | -266     |
+| time/              |          |
+|    fps             | 2142     |
+|    iterations      | 1        |
+|    time_elapsed    | 9        |
+|    total_timesteps | 20480    |
+---------------------------------
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1e+03        |
+|    ep_rew_mean          | -138         |
+| time/                   |              |
+|    fps                  | 1853         |
+|    iterations           | 2            |
+|    time_elapsed         | 22           |
+|    total_timesteps      | 40960        |
+| train/                  |              |
+|    approx_kl            | 0.0066887527 |
+|    clip_fraction        | 0.0353       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -1.61        |
+|    explained_variance   | -0.00129     |
+|    learning_rate        | 0.0003       |
+|    loss                 | 8.26         |
+|    n_updates            | 10           |
+|    policy_gradient_loss | -0.00197     |
+|    value_loss           | 38.9         |
+------------------------------------------
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1e+03        |
+|    ep_rew_mean          | -88.5        |
+| time/                   |              |
+|    fps                  | 1755         |
+|    iterations           | 3            |
+|    time_elapsed         | 35           |
+|    total_timesteps      | 61440        |
+| train/                  |              |
+|    approx_kl            | 0.0083515365 |
+|    clip_fraction        | 0.0742       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -1.58        |
+|    explained_variance   | 0.667        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 0.296        |
+|    n_updates            | 20           |
+|    policy_gradient_loss | -0.0029      |
+|    value_loss           | 1.41         |
+------------------------------------------
+[4;33mReloaded modules[24m: src, src.environment[0m
+Using cpu device
+Starting iteration 0...
+[34m[1mwandb[0m: [33mWARNING[0m Found log directory outside of given root_logdir, dropping given root_logdir for event file in /home/peas/Documents/Collective Intelligence/formation-tim/logs/tensorboard/PPO_0
+Logging to /home/peas/Documents/Collective Intelligence/formation-tim/logs/tensorboard/PPO_0
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 1e+03    |
+|    ep_rew_mean     | -70.1    |
+| time/              |          |
+|    fps             | 2127     |
+|    iterations      | 1        |
+|    time_elapsed    | 9        |
+|    total_timesteps | 20480    |
+---------------------------------
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 1e+03       |
+|    ep_rew_mean          | -55.3       |
+| time/                   |             |
+|    fps                  | 1764        |
+|    iterations           | 2           |
+|    time_elapsed         | 23          |
+|    total_timesteps      | 40960       |
+| train/                  |             |
+|    approx_kl            | 0.005856118 |
+|    clip_fraction        | 0.014       |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -1.61       |
+|    explained_variance   | -0.0274     |
+|    learning_rate        | 0.0003      |
+|    loss                 | 1.65        |
+|    n_updates            | 10          |
+|    policy_gradient_loss | -0.00182    |
+|    value_loss           | 8.68        |
+-----------------------------------------
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 1e+03       |
+|    ep_rew_mean          | -95.1       |
+| time/                   |             |
+|    fps                  | 1715        |
+|    iterations           | 3           |
+|    time_elapsed         | 35          |
+|    total_timesteps      | 61440       |
+| train/                  |             |
+|    approx_kl            | 0.007832764 |
+|    clip_fraction        | 0.0637      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -1.6        |
+|    explained_variance   | 0.0304      |
+|    learning_rate        | 0.0003      |
+|    loss                 | 4.12        |
+|    n_updates            | 20          |
+|    policy_gradient_loss | -0.00451    |
+|    value_loss           | 9.85        |
+-----------------------------------------

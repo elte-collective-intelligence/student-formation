@@ -1,0 +1,31 @@
+{
+  "os":  "Linux-6.11.2-amd64-x86_64-with-glibc2.40",
+  "python":  "CPython 3.12.7",
+  "startedAt":  "2024-12-24T16:07:53.016016Z",
+  "program":  "/home/peas/Documents/Collective Intelligence/formation-tim/src/trainer.py",
+  "codePath":  "src/trainer.py",
+  "git":  {
+    "remote":  "https://gitlab.inf.elte.hu/student-projects-and-thesis/collective-intelligence/formation.git",
+    "commit":  "f31c8629712014eac2f0e84e5bb252e85aece24d"
+  },
+  "email":  "nguthuri@ya.ru",
+  "root":  "/home/peas/Documents/Collective Intelligence/formation-tim/src",
+  "host":  "OF-KTC-1-D24",
+  "executable":  "/usr/bin/python3",
+  "codePathLocal":  "trainer.py",
+  "cpu_count":  2,
+  "cpu_count_logical":  4,
+  "disk":  {
+    "/":  {
+      "total":  "252104101888",
+      "used":  "226599669760"
+    }
+  },
+  "memory":  {
+    "total":  "16025247744"
+  },
+  "cpu":  {
+    "count":  2,
+    "countLogical":  4
+  }
+}

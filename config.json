@@ -1,0 +1,11 @@
+{
+    "num_good_guys": 5,
+    "num_bad_guys": 5,
+    "good_guy_color": "blue",
+    "bad_guy_color": "red",
+    "shape_settings": [
+        {"type": "triangle", "sides": 3, "radius": 30},
+        {"type": "square", "sides": 4, "radius": 40},
+        {"type": "pentagon", "sides": 5, "radius": 50}
+    ]
+}
