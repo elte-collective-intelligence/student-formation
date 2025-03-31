@@ -1,4 +1,4 @@
-# Formation Project -- Tim (YC8EU4)
+# Formation Project
 
 This project simulates multi-agent reinforcement learning using the PettingZoo framework. It includes several key scripts to define, train, and run the environment.
 
