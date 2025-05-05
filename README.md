@@ -37,8 +37,8 @@ Trains reinforcement learning models using the PettingZoo environment and stable
 Unzip circle_model.zip and mountains_model.zip;
 
 ```bash
-unzip circle_model.zip -d models/circle
-unzip mountains_model.zip -d models/mountains
+unzip models/circle_model.zip -d models/circle
+unzip models/mountains_model.zip -d models/mountains
 ```
 
 ### 2. Install Dependencies
