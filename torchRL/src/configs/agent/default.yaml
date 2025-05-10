@@ -1,0 +1,4 @@
+agent:
+  policy_hidden_dim: 128
+  critic_hidden_dim: 128
+  shared: true

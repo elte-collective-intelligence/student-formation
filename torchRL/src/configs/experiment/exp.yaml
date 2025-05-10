@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+  - base
+  - env: task
+  - algo: ppo
+  - agent: default
+
+experiment:
+  total_frames: 1_000_000

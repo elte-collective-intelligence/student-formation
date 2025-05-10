@@ -1,0 +1,4 @@
+env:
+  name: formation_env
+  num_agents: 4
+  obstacle_density: 0.1

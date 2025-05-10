@@ -59,6 +59,8 @@ The dependencies.txt file contains the following packages;
 ### 3. Train the models
 
 ```bash
+pip install --upgrade wandb
+pip install stable-baselines3
 python trainer.py
 ```
 
