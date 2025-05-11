@@ -10,7 +10,7 @@ from src.agents.ppo_agents import policy, critic
 from src.rollout.evaulator import evaluate_policy
 from src.rollout.visualizer import record_episode
 
-@hydra.main(version_base=None, config_path="configs/experiment", config_name="exp.yaml")
+@hydra.main(version_base=None, config_path="configs", config_name="experiment/exp.yaml")
 def main(cfg: DictConfig):
     writer = SummaryWriter(log_dir=cfg.logging.log_dir)
     env = Env()
