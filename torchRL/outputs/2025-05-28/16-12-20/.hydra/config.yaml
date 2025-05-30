@@ -1,0 +1,27 @@
+log_interval: 10
+seed: 42
+device: cpu
+project_name: marl_formation_torchrl
+env:
+  name: FormationEnv
+  num_agents: 5
+  arena_size: 10.0
+  max_steps: 200
+  target_radius: 3.0
+  obs_keys:
+  - observation_self
+  - observation_target_vector
+algo:
+  name: ppo
+  lr: 0.0003
+  gamma: 0.99
+  gae_lambda: 0.95
+  ppo_epochs: 10
+  clip_epsilon: 0.2
+  entropy_coef: 0.01
+  value_loss_coef: 0.5
+  frames_per_batch: 2048
+  total_frames: 1000000
+  hidden_dims:
+  - 64
+  - 64

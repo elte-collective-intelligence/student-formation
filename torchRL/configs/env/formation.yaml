@@ -1,0 +1,6 @@
+name: "FormationEnv"
+num_agents: 5
+arena_size: 10.0
+max_steps: 200
+target_radius: 3.0
+obs_keys: ["observation_self", "observation_target_vector"]

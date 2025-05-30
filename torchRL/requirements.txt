@@ -1,0 +1,8 @@
+torchrl
+torch
+tensordict
+hydra-core
+tensorboard
+pygame
+imageio
+tqdm

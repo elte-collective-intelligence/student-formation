@@ -1,80 +1,123 @@
 import torch
+from tensordict import TensorDict, TensorDictBase
 from torchrl.envs import EnvBase
-from tensordict import TensorDict
-from torchrl.data import CompositeSpec
-from torchrl.data.tensor_specs import BoundedTensorSpec
+# Use new spec names, but keep DiscreteTensorSpec for now
+from torchrl.data.tensor_specs import (
+    UnboundedContinuousTensorSpec as Unbounded,
+    CompositeSpec as Composite,
+    BoundedTensorSpec as Bounded,
+    DiscreteTensorSpec, # Reverted: Keeping DiscreteTensorSpec for done
+)
+import math
 
-class Env(EnvBase):
-    def __init__(self):
-        super().__init__()
-        self.num_agents = 4
-        self.obs_dim = 4  # e.g., (x, y, dx_to_center, nearest_agent_dist)
-        self.action_dim = 2  # e.g., (dx, dy)
+class FormationEnv(EnvBase):
+    metadata = {
+        "render_modes": ["human", "rgb_array"],
+        "render_fps": 30,
+    }
+    batch_locked = False
 
-        self._observation_spec = CompositeSpec({
-            "obs": BoundedTensorSpec(
-                shape=(self.num_agents, self.obs_dim),
-                dtype=torch.float32,
-                minimum=-1.0,
-                maximum=1.0
-            )
-        })
+    def __init__(self, cfg, device="cpu"):
+        super().__init__(device=device, batch_size=torch.Size([cfg.env.num_agents]))
 
-        self._action_spec = CompositeSpec({
-            "action": BoundedTensorSpec(
-                shape=(self.num_agents, self.action_dim),
-                dtype=torch.float32,
-                minimum=-1.0,
-                maximum=1.0
-            )
-        })
+        self.num_agents = cfg.env.num_agents
+        self.arena_size = cfg.env.arena_size
+        self.max_steps = cfg.env.max_steps
+        self.target_radius = cfg.env.target_radius
+        self.current_step = 0
 
-        self._reward_spec = CompositeSpec({
-            "reward": BoundedTensorSpec(shape=(1,), dtype=torch.float32, minimum=-10.0, maximum=10.0)
-        })
+        self._make_specs()
+        self.actor_obs_keys = cfg.env.obs_keys
 
-        self._done_spec = CompositeSpec({
-            "done": BoundedTensorSpec(shape=(1,), dtype=torch.bool)
-        })
+    def _make_specs(self) -> None:
+        self.observation_spec = Composite(
+            {
+                "observation_self": Unbounded(
+                    shape=(self.num_agents, 2),
+                    device=self.device,
+                ),
+                "observation_target_vector": Unbounded(
+                    shape=(self.num_agents, 2),
+                    device=self.device,
+                ),
+            },
+            shape=torch.Size([self.num_agents])
+        )
 
-        self.positions = None
-        self.steps = 0
+        self.action_spec = Bounded(
+            low=-1.0,
+            high=1.0,
+            shape=(self.num_agents, 2),
+            device=self.device,
+            dtype=torch.float32
+        )
 
-    def reset(self) -> TensorDict:
-        self.positions = torch.rand(self.num_agents, 2) * 2 - 1
-        self.steps = 0
-        return TensorDict({"obs": self._get_obs()}, batch_size=[])
+        self.reward_spec_unbatched = Unbounded(
+            shape=(1,),
+            device=self.device
+        )
 
-    def step(self, actions: TensorDict) -> TensorDict:
-        action = actions["action"]
-        self.positions += action.clamp(-0.1, 0.1)  # movement
+        self.done_spec_unbatched = DiscreteTensorSpec( # Reverted to DiscreteTensorSpec
+            n=2,
+            shape=torch.Size([1]),
+            dtype=torch.bool,
+            device=self.device
+        )
 
-        reward = -torch.var(self.positions.norm(dim=1), unbiased=False).unsqueeze(0)
-        self.steps += 1
-        done = torch.tensor([self.steps > 100])
+    def _reset(self, tensordict: TensorDictBase = None) -> TensorDictBase:
+        self.current_step = 0
+        agent_positions = (torch.rand(self.num_agents, 2, device=self.device) - 0.5) * self.arena_size
+        target_positions = torch.zeros(self.num_agents, 2, device=self.device)
+        for i in range(self.num_agents):
+            angle = 2 * math.pi * i / self.num_agents
+            target_positions[i, 0] = self.target_radius * math.cos(angle)
+            target_positions[i, 1] = self.target_radius * math.sin(angle)
+        self.agent_positions = agent_positions
+        self.target_positions = target_positions
 
-        return TensorDict({
-            "obs": self._get_obs(),
-            "reward": reward,
-            "done": done
-        }, batch_size=[])
+        obs_self = self.agent_positions.clone()
+        obs_target_vector = self.target_positions - self.agent_positions
+        done_val_for_each_agent = torch.zeros((self.num_agents, 1), dtype=torch.bool, device=self.device)
 
-    def _get_obs(self):
-        center = self.positions.mean(dim=0)
-        dists = ((self.positions.unsqueeze(1) - self.positions.unsqueeze(0)).norm(dim=2) + 1e-5)
-        nearest = dists.topk(2, largest=False).values[:, 1]
-        rel = torch.cat([
-            self.positions,
-            (center - self.positions),
-            nearest.unsqueeze(1)
-        ], dim=1)
-        return rel
+        td_out = TensorDict(
+            {
+                "observation_self": obs_self,
+                "observation_target_vector": obs_target_vector,
+                "done": done_val_for_each_agent,
+            },
+            batch_size=torch.Size([self.num_agents]),
+            device=self.device
+        )
+        return td_out
 
-    @property
-    def observation_spec(self): return self._observation_spec
-    @property
-    def action_spec(self): return self._action_spec
-    @property
-    def reward_spec(self): return self._reward_spec
-    @property
-    def done_spec(self): return self._done_spec
+    def _step(self, tensordict: TensorDictBase) -> TensorDictBase:
+        self.current_step += 1
+        actions = tensordict["action"]
+        self.agent_positions += actions * 0.1
+        self.agent_positions = torch.clamp(self.agent_positions, -self.arena_size / 2, self.arena_size / 2)
+
+        distances_to_target = torch.norm(self.agent_positions - self.target_positions, dim=1, keepdim=True)
+        reward_val_for_each_agent = -distances_to_target
+
+        is_episode_done = self.current_step >= self.max_steps
+        done_val_for_each_agent = torch.full((self.num_agents, 1), is_episode_done, dtype=torch.bool, device=self.device)
+
+        obs_self = self.agent_positions.clone()
+        obs_target_vector = self.target_positions - self.agent_positions
+
+        td_out = TensorDict(
+            {
+                "observation_self": obs_self,
+                "observation_target_vector": obs_target_vector,
+                "reward": reward_val_for_each_agent,
+                "done": done_val_for_each_agent,
+            },
+            batch_size=torch.Size([self.num_agents]),
+            device=self.device
+        )
+        return td_out
+
+    def _set_seed(self, seed: int):
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)

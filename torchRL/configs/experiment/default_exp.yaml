@@ -1,0 +1,20 @@
+# @package _global_
+# This SHOULD set the context to the global scope.
+
+defaults:
+  - _self_
+  - /base: main_setup  # <--- CHANGE THIS LINE
+  - /env: formation
+  - /algo: ppo
+  - override /hydra/job_logging: default
+  - override /hydra/hydra_logging: default
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+
+# Training specific
+log_interval: 10
