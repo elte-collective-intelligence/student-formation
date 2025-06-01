@@ -36,7 +36,7 @@ def generate_formation_gif(agent_trajectories, filename="formation.gif"):
 
     ani = animation.FuncAnimation(fig, update, frames=len(agent_trajectories),
                                   init_func=init, blit=True)
-    ani.save(filename, writer='pillow', fps=5)
+    ani.save(filename, writer='pillow', fps=60)
     plt.close(fig)
 
 @hydra.main(version_base=None, config_path="./configs", config_name="experiment/default_exp")
@@ -59,21 +59,25 @@ def main(cfg: DictConfig) -> None:
 
     # Evaluation + Logging positions
     positions_over_time = []
+    # Reset environment
     td = env.reset()
-    done = torch.zeros((env.num_agents, 1), dtype=torch.bool, device=device)
+    print("Initial agent positions:", env.agent_positions)
 
-    while not done.any():
+    # Run loop until any agent is done, or max_steps reached
+    positions_over_time = []
+    iter = 0
+    while not td["done"].any() and iter < 2000:
         obs = td.select(*env.actor_obs_keys)
+
         with torch.no_grad():
-            action_td = actor(obs)
-        action = action_td["action"]  # Extract just the tensor
+            action = actor(obs)["action"]  # extract tensor from tensordict
+
         td.update({"action": action})
-
         td = env.step(td)
-        done = td["done"]
 
-        # Log agent positions for visualization
+        # Log agent positions
         positions_over_time.append(env.agent_positions.cpu().numpy().tolist())
+        iter += 1
 
     # Save GIF
     output_path = os.path.join(os.getcwd(), "formation.gif")
