@@ -18,3 +18,8 @@ python -m pip install --upgrade pip
 
 ## Usage
 To run the program after setup, use the `python main.py` command in the torchRL folder. The output is printed to the standard output.
+
+## Running tests
+```shell
+python -m unittest discover -s test
+```
