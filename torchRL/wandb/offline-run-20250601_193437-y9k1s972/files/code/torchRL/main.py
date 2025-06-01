@@ -56,6 +56,8 @@ def main(cfg: DictConfig) -> None:
     #     #     proof_env_instance.render(mode="human")
     #     # proof_env_instance.close() # Close after test if you want to exit
     #     # print("Render test finished.")
+    # --- End of Quick Render Test ---
+
 
     def create_env_fn_for_collector():
         return FormationEnv(cfg=cfg, device=device)
@@ -150,6 +152,9 @@ def main(cfg: DictConfig) -> None:
         avg_total_loss_iter /= cfg.algo.ppo_epochs
 
         if i % cfg.log_interval == 0:
+            # Reward from the current collected batch data_batch_from_collector[("next", "reward")]
+            # Shape is [Time_steps_in_batch, Num_agents, 1]
+            # Mean reward per (agent, step) transition in this batch
             mean_reward_in_batch = data_batch_from_collector[("next", "reward")].mean().item()
             
             log_payload = {
@@ -190,13 +195,10 @@ def main(cfg: DictConfig) -> None:
     collector.shutdown()
     writer.close()
     
-    if proof_env_instance is not None: 
-        # Check if the render test might have already closed it and nulled pygame
-        # This depends on how render test close is handled; for now, just call close.
-        try:
-            proof_env_instance.close()
-        except Exception as e:
-            print(f"Error closing proof_env_instance: {e}")
+    # Close the proof_env_instance if it wasn't closed by a render test
+    if hasattr(proof_env_instance, 'close') and callable(getattr(proof_env_instance, 'close')):
+        if not cfg.get("test_render_on_start", False): # Avoid double close if test already closed it
+             proof_env_instance.close()
     
     print("Training finished.")
 

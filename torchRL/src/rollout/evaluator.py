@@ -18,12 +18,7 @@ def evaluate_policy(env, policy, num_episodes=5, max_steps_per_episode=None):
         # Reset returns a TensorDict with shape [num_agents, ...]
         # For a shared policy, we expect observations for each agent.
         td = env.reset()
-        
-        # `td` is initially shaped [num_agents, ...].
-        # Policy expects batch of observations. If policy is shared and processes one agent obs at a time,
-        # we might need to reshape or iterate.
-        # However, TensorDictModule with appropriate in_keys should handle the [num_agents] batch dim.
-        
+
         for step in range(max_steps_per_episode):
             # Policy expects batch_size leading dims. Here, num_agents is the "batch".
             # If policy.in_keys are ["obs_self", "obs_target_vector"], it will pick these up.

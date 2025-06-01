@@ -6,3 +6,5 @@ tensorboard
 pygame
 imageio
 tqdm
+wandb
+matplotlib
