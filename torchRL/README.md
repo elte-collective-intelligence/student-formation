@@ -23,3 +23,7 @@ To run the program after setup, use the `python main.py` command in the torchRL 
 ```shell
 python -m unittest discover -s test
 ```
+
+## Work distribution:
+Attila: Gif generation, Presentation, Docker implementation, Unit tests.
+Árpád: TorchRL implementation skeleton, and then improvements, Wandb.
