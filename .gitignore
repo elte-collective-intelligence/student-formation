@@ -46,3 +46,11 @@ dist/
 
 # pytest results
 *.xml
+
+# pycache
+__pycache__/
+*.py[cod]
+
+# logs/outputs
+logs/
+outputs/

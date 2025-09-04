@@ -1,7 +1,0 @@
-algo:
-  name: ppo
-  learning_rate: 3e-4
-  gamma: 0.99
-  clip_epsilon: 0.2
-  entropy_coef: 0.01
-  ppo_epochs: 10

@@ -1,8 +1,0 @@
-numpy==1.23.5
-pygame==2.6.0
-shapely==2.0.1
-pettingzoo==1.22.0
-stable-baselines3[extra]==1.8.0
-supersuit==3.7.3
-imageio==2.31.1
-matplotlib==3.8.1
