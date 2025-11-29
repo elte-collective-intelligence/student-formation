@@ -1,6 +1,7 @@
 import unittest
 from src.agents.ppo_agent import PPOAgent
 
+
 class TestPPOAgent(unittest.TestCase):
     def test_agent_initialization(self):
         agent = PPOAgent()

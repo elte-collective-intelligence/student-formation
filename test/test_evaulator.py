@@ -3,6 +3,7 @@ from src.rollout.evaluator import Evaluator
 from src.envs.env import make_env
 from src.agents.ppo_agent import PPOAgent
 
+
 class TestEvaluator(unittest.TestCase):
     def test_evaluator_run(self):
         env = make_env()

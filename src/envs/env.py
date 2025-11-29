@@ -8,7 +8,6 @@ from torchrl.data.tensor_specs import (
     DiscreteTensorSpec,
 )
 import numpy as np
-import math
 import pygame  # For rendering
 import pygame.gfxdraw
 
@@ -57,64 +56,6 @@ class FormationEnv(EnvBase):
         # Shape configuration
         self.shape_type = cfg.env.get("shape_type", "circle")
         self.target_shape = self.__create_shape()
-        # self.current_target_center = torch.zeros(2, device=self.device)
-
-        # if self.shape_type == "circle":
-        #     self.circle_center = torch.tensor(
-        #         cfg.env.circle.center, dtype=torch.float32, device=self.device
-        #     )
-        #     self.circle_radius = cfg.env.circle.radius
-        #     self.current_target_center = self.circle_center
-        #     self.approx_polygon_vertices = None
-        # elif self.shape_type == "curvilinear_triangle":
-        #     # ... (curvilinear triangle setup - kept for completeness but not focused on now) ...
-        #     ct_cfg = cfg.env.curvilinear_triangle
-        #     self.tri_p1 = torch.tensor(
-        #         ct_cfg.p1, dtype=torch.float32, device=self.device
-        #     )
-        #     self.tri_p2 = torch.tensor(
-        #         ct_cfg.p2, dtype=torch.float32, device=self.device
-        #     )
-        #     self.tri_p3 = torch.tensor(
-        #         ct_cfg.p3, dtype=torch.float32, device=self.device
-        #     )
-        #     self.tri_control1 = torch.tensor(
-        #         ct_cfg.control1, dtype=torch.float32, device=self.device
-        #     )
-        #     self.tri_control2 = torch.tensor(
-        #         ct_cfg.control2, dtype=torch.float32, device=self.device
-        #     )
-        #     self.num_bezier_points = ct_cfg.get("num_bezier_points", 20)
-
-        #     self.curve1_points = self._bezier_curve_torch(
-        #         self.tri_p1, self.tri_control1, self.tri_p2, self.num_bezier_points
-        #     )
-        #     self.curve2_points = self._bezier_curve_torch(
-        #         self.tri_p2, self.tri_control2, self.tri_p3, self.num_bezier_points
-        #     )
-
-        #     self.approx_polygon_vertices = torch.cat(
-        #         [
-        #             self.curve1_points[:-1],
-        #             self.curve2_points[:-1],
-        #             self.tri_p3.unsqueeze(0),
-        #             self.tri_p1.unsqueeze(0),
-        #         ],
-        #         dim=0,
-        #     )
-        #     self.current_target_center = torch.mean(
-        #         torch.cat(
-        #             [
-        #                 self.tri_p1.unsqueeze(0),
-        #                 self.tri_p2.unsqueeze(0),
-        #                 self.tri_p3.unsqueeze(0),
-        #             ],
-        #             dim=0,
-        #         ),
-        #         dim=0,
-        #     )
-        # else:
-        #     raise ValueError(f"Unsupported shape_type: {self.shape_type}")
 
         self._make_specs()
         self.actor_obs_keys = cfg.env.obs_keys_for_actor
@@ -150,14 +91,6 @@ class FormationEnv(EnvBase):
             return Polygon(vertices, device=self.device)
         else:
             raise ValueError(f"Unsupported shape_type: {self.shape_type}")
-
-    # def _bezier_curve_torch(self, p0_abs, p1_control_abs, p2_abs, num_points=20):
-    #     p0 = p0_abs.unsqueeze(0)
-    #     p1_control = p1_control_abs.unsqueeze(0)
-    #     p2 = p2_abs.unsqueeze(0)
-    #     t = torch.linspace(0, 1, num_points, device=self.device).unsqueeze(1)
-    #     points = ((1 - t) ** 2 * p0) + (2 * (1 - t) * t * p1_control) + (t**2 * p2)
-    #     return points
 
     def _make_specs(self) -> None:
         obs_dim_per_agent = 4
@@ -217,98 +150,12 @@ class FormationEnv(EnvBase):
             device=self.device,
         )
 
-    # def _point_in_polygon_torch_batched(
-    #     self, points: torch.Tensor, polygon_vertices: torch.Tensor
-    # ) -> torch.Tensor:
-    #     if polygon_vertices is None or polygon_vertices.shape[0] < 3:
-    #         print_warning_once(
-    #             f"Polygon for {self.shape_type} is not defined. Defaulting to False for point_in_polygon."
-    #         )
-    #         return torch.zeros(points.shape[0], dtype=torch.bool, device=points.device)
-    #     inside = torch.zeros(points.shape[0], dtype=torch.bool, device=points.device)
-    #     for i in range(points.shape[0]):
-    #         p_x, p_y = points[i, 0], points[i, 1]
-    #         crossings = 0
-    #         for j in range(polygon_vertices.shape[0]):
-    #             v1_x, v1_y = polygon_vertices[j, 0], polygon_vertices[j, 1]
-    #             v2_x, v2_y = (
-    #                 polygon_vertices[(j + 1) % polygon_vertices.shape[0], 0],
-    #                 polygon_vertices[(j + 1) % polygon_vertices.shape[0], 1],
-    #             )
-    #             if ((v1_y <= p_y) and (v2_y > p_y)) or ((v1_y > p_y) and (v2_y <= p_y)):
-    #                 if p_x < (v2_x - v1_x) * (p_y - v1_y) / (v2_y - v1_y + 1e-9) + v1_x:
-    #                     crossings += 1
-    #         if crossings % 2 == 1:
-    #             inside[i] = True
-    #     return inside
-
-    # def _point_in_shape_batch(self, points_to_check: torch.Tensor) -> torch.Tensor:
-    #     if self.shape_type == "circle":
-    #         # For circle, "in_shape" can mean being close to the circumference
-    #         # or simply inside. Let's use "inside" for now for boundary penalty.
-    #         dist_to_center = torch.norm(
-    #             points_to_check - self.circle_center.unsqueeze(0), dim=1
-    #         )
-    #         return (
-    #             dist_to_center <= self.circle_radius
-    #         )  # True if inside or on the circle
-    #     elif self.shape_type == "curvilinear_triangle":
-    #         return self._point_in_polygon_torch_batched(
-    #             points_to_check, self.approx_polygon_vertices
-    #         )
-    #     return torch.zeros(
-    #         points_to_check.shape[0], dtype=torch.bool, device=self.device
-    #     )
-
     def _calc_rewards(self) -> torch.Tensor:
         rewards = torch.zeros(self.num_agents, 1, device=self.device)
 
         sdf = self.target_shape.signed_distance(self.agent_positions).unsqueeze(1)
         formation_accuracy_reward = torch.exp(-5.0 * sdf**2)
         rewards += formation_accuracy_reward
-
-        # Reward for being at the correct distance from the circle center
-        # if self.shape_type == "circle":
-        #     dist_to_center = torch.norm(
-        #         self.agent_positions - self.circle_center.unsqueeze(0),
-        #         dim=1,
-        #         keepdim=True,
-        #     )
-        #     # Gaussian-like reward for being at self.circle_radius distance
-        #     # Higher reward when dist_to_center is close to self.circle_radius
-        #     target_dist_error = torch.abs(dist_to_center - self.circle_radius)
-        #     # Use a negative exponential: reward = exp(-k * error^2)
-        #     # Smaller error -> reward closer to 1. Larger error -> reward closer to 0.
-        #     # k controls sensitivity. Let's try k=5 for now.
-        #     formation_accuracy_reward = torch.exp(-5.0 * target_dist_error**2)
-        #     rewards += formation_accuracy_reward
-
-        #     # Optional: Spacing reward (can be complex)
-        #     # For now, let's add a small penalty for being too close to other agents
-        #     if self.num_agents > 1:
-        #         dist_matrix = torch.cdist(self.agent_positions, self.agent_positions)
-        #         dist_matrix.fill_diagonal_(float("inf"))  # Ignore self-distance
-        #         closest_dists, _ = torch.min(dist_matrix, dim=1, keepdim=True)
-        #         # Penalize if too close, e.g., closer than 2 * agent_size
-        #         min_spacing = 2.0 * self.agent_size_world_units
-        #         spacing_penalty = (
-        #             torch.clamp(min_spacing - closest_dists, min=0.0) * 0.5
-        #         )  # Scale penalty
-        #         rewards -= spacing_penalty
-
-        # elif self.shape_type == "curvilinear_triangle":
-        #     # Original reward logic from your MPE environment for being in shape
-        #     in_shape = self._point_in_shape_batch(self.agent_positions)
-        #     if self.num_agents > 1:
-        #         dist_matrix = torch.cdist(self.agent_positions, self.agent_positions)
-        #         dist_matrix.fill_diagonal_(float("inf"))
-        #         closest_dists_to_others, _ = torch.min(dist_matrix, dim=1)
-        #         # Only apply this part of reward if in_shape is True
-        #         rewards[in_shape, 0] += closest_dists_to_others[in_shape]
-        #     elif self.num_agents == 1:  # Single agent
-        #         rewards[
-        #             in_shape, 0
-        #         ] += 0.1  # Small positive reward for being in shape alone
 
         # Boundary penalty (from your MPE code, applied universally)
         # This assumes arena is roughly [-1, 1] if boundary is 0.9
@@ -446,33 +293,6 @@ class FormationEnv(EnvBase):
         elif isinstance(self.target_shape, Polygon):
             verts = self._to_screen_coords(self.target_shape.vertices)
             pygame.draw.aalines(self.screen, (200, 200, 200), True, verts.tolist())
-        # if self.shape_type == "circle":
-        #     s_center = self._to_screen_coords(self.circle_center.unsqueeze(0))[0]
-        #     s_radius = int(self.circle_radius * self.render_scale)
-        #     pygame.gfxdraw.aacircle(
-        #         self.screen, s_center[0], s_center[1], s_radius, (200, 200, 200)
-        #     )
-        #     pygame.gfxdraw.filled_circle(
-        #         self.screen, s_center[0], s_center[1], s_radius, (220, 220, 220, 100)
-        #     )  # Slightly transparent fill
-        # elif self.shape_type == "curvilinear_triangle":
-        #     if self.curve1_points is not None and self.curve2_points is not None:
-        #         curve1_sc = self._to_screen_coords(self.curve1_points)
-        #         curve2_sc = self._to_screen_coords(self.curve2_points)
-        #         p1_sc = self._to_screen_coords(self.tri_p1.unsqueeze(0))[0]
-        #         p3_sc = self._to_screen_coords(self.tri_p3.unsqueeze(0))[0]
-
-        #         if len(curve1_sc) > 1:
-        #             pygame.draw.aalines(
-        #                 self.screen, (180, 180, 255), False, curve1_sc.tolist()
-        #             )
-        #         if len(curve2_sc) > 1:
-        #             pygame.draw.aalines(
-        #                 self.screen, (180, 180, 255), False, curve2_sc.tolist()
-        #             )
-        #         pygame.draw.aaline(
-        #             self.screen, (180, 180, 255), tuple(p1_sc), tuple(p3_sc)
-        #         )
 
         # --- Draw Agents ---
         agent_screen_pos = self._to_screen_coords(self.agent_positions)

@@ -16,9 +16,8 @@ from src.envs.env import FormationEnv
 from src.agents.ppo_agent import create_ppo_actor_critic
 
 
-@hydra.main(
-    version_base=None, config_path="configs", config_name="experiment/default_exp"
-)
+@hydra.main(version_base=None, config_path="configs",
+            config_name="experiment/default_exp")
 def main(cfg: DictConfig) -> None:
     # Initialize W&B
     run_name = f"run_{time.strftime('%Y%m%d-%H%M%S')}_{cfg.env.shape_type}"
@@ -26,8 +25,12 @@ def main(cfg: DictConfig) -> None:
         run_name += f"_r{cfg.env.circle.radius}"
 
     wandb.init(
-        project=cfg.base.project_name + "-torchrl_formations",
-        config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
+        project=cfg.base.project_name +
+        "-torchrl_formations",
+        config=OmegaConf.to_container(
+            cfg,
+            resolve=True,
+            throw_on_missing=True),
         name=run_name,
         save_code=True,
     )
@@ -43,7 +46,8 @@ def main(cfg: DictConfig) -> None:
     proof_env_instance = FormationEnv(cfg=cfg, device=device)
     proof_env_td = proof_env_instance.reset()
     print(f"Proof env batch_size after reset: {proof_env_instance.batch_size}")
-    # print(f"Initial observation from proof_env: {proof_env_td['observation']}") # For debugging
+    # print(f"Initial observation from proof_env:
+    # {proof_env_td['observation']}") # For debugging
 
     # --- Quick Test of Rendering (Optional - uncomment to test) ---
     # if cfg.get("test_render_on_start", False):
@@ -63,7 +67,8 @@ def main(cfg: DictConfig) -> None:
     def create_env_fn_for_collector():
         return FormationEnv(cfg=cfg, device=device)
 
-    actor_network, value_network = create_ppo_actor_critic(cfg, proof_env_instance)
+    actor_network, value_network = create_ppo_actor_critic(
+        cfg, proof_env_instance)
     actor_network = actor_network.to(device)
     value_network = value_network.to(device)
 
@@ -73,7 +78,8 @@ def main(cfg: DictConfig) -> None:
         frames_per_batch=cfg.algo.frames_per_batch,
         total_frames=cfg.algo.total_frames,
         device=device,
-        max_frames_per_traj=proof_env_instance.max_steps,  # Ensure trajectories don't exceed max_steps
+        # Ensure trajectories don't exceed max_steps
+        max_frames_per_traj=proof_env_instance.max_steps,
     )
 
     loss_module = ClipPPOLoss(
@@ -82,7 +88,8 @@ def main(cfg: DictConfig) -> None:
         clip_epsilon=cfg.algo.clip_epsilon,
         entropy_coef=cfg.algo.entropy_coef,
         value_loss_coef=cfg.algo.value_loss_coef,
-        # normalize_advantage=True, # Consider adding this if advantages are unstable
+        # normalize_advantage=True, # Consider adding this if advantages are
+        # unstable
     )
     loss_module = loss_module.to(device)
 
@@ -106,7 +113,8 @@ def main(cfg: DictConfig) -> None:
 
     recent_rewards_for_early_stop = []
     early_stop_patience = cfg.algo.get("early_stop_patience", 20)
-    early_stop_reward_thresh = cfg.algo.get("early_stop_reward_threshold", 0.95)
+    early_stop_reward_thresh = cfg.algo.get(
+        "early_stop_reward_threshold", 0.95)
 
     for i, data_batch_from_collector in enumerate(collector):
         current_frames_collected_this_iter = data_batch_from_collector.numel()
@@ -204,7 +212,8 @@ def main(cfg: DictConfig) -> None:
 
     if proof_env_instance is not None:
         # Check if the render test might have already closed it and nulled pygame
-        # This depends on how render test close is handled; for now, just call close.
+        # This depends on how render test close is handled; for now, just call
+        # close.
         try:
             proof_env_instance.close()
         except Exception as e:
