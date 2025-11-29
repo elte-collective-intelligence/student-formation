@@ -1,0 +1,35 @@
+# ===========================
+# Formation Environment Config
+# ===========================
+
+num_agents: 10
+arena_size: 10
+max_steps: 5000
+
+# -------- SHAPE ----------
+shape_type: circle  # <--- MUST say polygon
+
+circle:
+  center: [0.0, 0.0]
+  radius: 2.0
+
+polygon:
+  vertices: 
+    - [0.0, 2.0]
+    - [-1.732, -1.0]
+    - [1.732, -1.0]
+
+star:
+  center: [0.0, 0.0]
+  r1: 1.0
+  r2: 2.0
+  n_points: 5
+
+# -------- OBSERVATIONS ----------
+obs_keys_for_actor:
+  - observation
+
+# -------- AGENT PHYSICS ----------
+agent_size: 0.05
+agent_accel: 3.0
+agent_max_speed: 0.6

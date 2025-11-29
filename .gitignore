@@ -6,6 +6,8 @@ __pycache__/
 .venv/
 env/
 venv/
+# Let configs/env/ be tracked
+!configs/env/
 
 # Nox-related files
 .nox/
