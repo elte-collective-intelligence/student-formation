@@ -7,7 +7,7 @@ arena_size: 10
 max_steps: 5000
 
 # -------- SHAPE ----------
-shape_type: circle  # <--- MUST say polygon
+shape_type: polygon
 
 circle:
   center: [0.0, 0.0]

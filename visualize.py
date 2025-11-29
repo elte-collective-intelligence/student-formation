@@ -18,6 +18,7 @@ import tqdm
 # Imports assuming main.py is in the root, and src is a package in the root
 from src.envs.env import FormationEnv
 from src.agents.ppo_agent import create_ppo_actor_critic
+from src.envs.shapes import make_star_vertices
 from src.rollout.evaluator import evaluate_policy
 
 
@@ -33,10 +34,18 @@ def generate_formation_gif(agent_trajectories, cfg, filename="formation.gif"):
         )
         ax.add_artist(shape_patch)
     elif cfg.env.shape_type == "star":
-        # Implementation soon
-        pass
+        verts = make_star_vertices(
+            center=cfg.env.star.center,
+            r1=cfg.env.star.r1,
+            r2=cfg.env.star.r2,
+            n_points=cfg.env.star.n_points,
+        )
+        shape_patch = plt.Polygon(
+            verts, closed=True, color="r", fill=False, linestyle="--", alpha=0.3
+        )
+        ax.add_artist(shape_patch)
     elif cfg.env.shape_type == "polygon":
-        verts = cfg.env.star.vertices
+        verts = cfg.env.polygon.vertices
         shape_patch = plt.Polygon(
             verts, closed=True, color="r", fill=False, linestyle="--", alpha=0.3
         )
