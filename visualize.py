@@ -14,6 +14,7 @@ from torchrl.objectives import ClipPPOLoss
 from torchrl.objectives.value import GAE
 from torch.utils.tensorboard import SummaryWriter
 import tqdm
+import tensordict
 
 # Imports assuming main.py is in the root, and src is a package in the root
 from src.envs.env import FormationEnv
@@ -30,12 +31,8 @@ def generate_formation_gif(agent_trajectories, cfg, filename="formation.gif"):
         center = cfg.env.circle.center  # [0.0, 0.0]
         radius = cfg.env.circle.radius
         shape_patch = plt.Circle(
-            tuple(center),
-            radius,
-            color="r",
-            fill=False,
-            linestyle="--",
-            alpha=0.3)
+            tuple(center), radius, color="r", fill=False, linestyle="--", alpha=0.3
+        )
         ax.add_artist(shape_patch)
     elif cfg.env.shape_type == "star":
         verts = make_star_vertices(
@@ -45,22 +42,14 @@ def generate_formation_gif(agent_trajectories, cfg, filename="formation.gif"):
             n_points=cfg.env.star.n_points,
         )
         shape_patch = plt.Polygon(
-            verts,
-            closed=True,
-            color="r",
-            fill=False,
-            linestyle="--",
-            alpha=0.3)
+            verts, closed=True, color="r", fill=False, linestyle="--", alpha=0.3
+        )
         ax.add_artist(shape_patch)
     elif cfg.env.shape_type == "polygon":
         verts = cfg.env.polygon.vertices
         shape_patch = plt.Polygon(
-            verts,
-            closed=True,
-            color="r",
-            fill=False,
-            linestyle="--",
-            alpha=0.3)
+            verts, closed=True, color="r", fill=False, linestyle="--", alpha=0.3
+        )
         ax.add_artist(shape_patch)
     else:
         raise ValueError("Unknown shape type for visualization")
@@ -84,8 +73,9 @@ def generate_formation_gif(agent_trajectories, cfg, filename="formation.gif"):
     plt.close(fig)
 
 
-@hydra.main(version_base=None, config_path="./configs",
-            config_name="experiment/default_exp")
+@hydra.main(
+    version_base=None, config_path="./configs", config_name="experiment/default_exp"
+)
 def main(cfg: DictConfig) -> None:
     os.chdir(hydra.utils.get_original_cwd())
 
@@ -125,8 +115,7 @@ def main(cfg: DictConfig) -> None:
             td = env.step(td)
 
             # Log both agents and their assigned targets
-            positions_over_time.append(
-                env.agent_positions.cpu().numpy().tolist())
+            positions_over_time.append(env.agent_positions.cpu().numpy().tolist())
 
             # Normalize step (this solves visualization for now)
             td = step_mdp(td)
