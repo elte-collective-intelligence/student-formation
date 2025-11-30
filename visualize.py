@@ -20,10 +20,11 @@ import tensordict
 from src.envs.env import FormationEnv
 from src.agents.ppo_agent import create_ppo_actor_critic
 from src.envs.shapes import make_star_vertices
-from src.rollout.evaluator import evaluate_policy
 
 
-def generate_formation_gif(agent_trajectories, cfg, filename="formation.gif"):
+def generate_formation_gif(
+    agent_trajectories, target_trajectories, cfg, filename="formation.gif"
+):
     fig, ax = plt.subplots(figsize=(6, 6))
 
     # Draw target shape
@@ -54,17 +55,26 @@ def generate_formation_gif(agent_trajectories, cfg, filename="formation.gif"):
     else:
         raise ValueError("Unknown shape type for visualization")
 
-    scat = ax.scatter([], [], s=100)
+    # Agent Scatter (Blue)
+    scat_agents = ax.scatter([], [], s=100, c="blue", label="Agents", zorder=5)
+
+    # Target Scatter (Green X)
+    scat_targets = ax.scatter(
+        [], [], s=50, c="green", marker="x", label="Targets", zorder=4
+    )
 
     def init():
         ax.set_xlim(-6, 6)
         ax.set_ylim(-6, 6)
-        return (scat,)
+        return (scat_agents, scat_targets)
 
     def update(frame):
         coords = agent_trajectories[frame]  # List of (x, y)
-        scat.set_offsets(coords)
-        return (scat,)
+        scat_agents.set_offsets(coords)
+        target_coords = target_trajectories[frame]
+        scat_targets.set_offsets(target_coords)
+
+        return (scat_agents, scat_targets)
 
     ani = animation.FuncAnimation(
         fig, update, frames=len(agent_trajectories), init_func=init, blit=True
@@ -107,6 +117,7 @@ def main(cfg: DictConfig) -> None:
 
     # Run loop until any agent is done, or max_steps reached
     positions_over_time = []
+    target_pos_log = []
     with torch.no_grad():
         frames = 400  # increase if needed
         for i in range(frames):
@@ -116,6 +127,7 @@ def main(cfg: DictConfig) -> None:
 
             # Log both agents and their assigned targets
             positions_over_time.append(env.agent_positions.cpu().numpy().tolist())
+            target_pos_log.append(env.assigned_target_positions.cpu().numpy().tolist())
 
             # Normalize step (this solves visualization for now)
             td = step_mdp(td)
@@ -126,7 +138,9 @@ def main(cfg: DictConfig) -> None:
     # Save GIF
     output_path = os.path.join(os.getcwd(), "formation.gif")
     print(f"Collected {len(positions_over_time)} frames")
-    generate_formation_gif(positions_over_time, cfg, filename=output_path)
+    generate_formation_gif(
+        positions_over_time, target_pos_log, cfg, filename=output_path
+    )
     print(f"GIF saved to: {output_path}")
 
 

@@ -16,8 +16,9 @@ from src.envs.env import FormationEnv
 from src.agents.ppo_agent import create_ppo_actor_critic
 
 
-@hydra.main(version_base=None, config_path="configs",
-            config_name="experiment/default_exp")
+@hydra.main(
+    version_base=None, config_path="configs", config_name="experiment/default_exp"
+)
 def main(cfg: DictConfig) -> None:
     # Initialize W&B
     run_name = f"run_{time.strftime('%Y%m%d-%H%M%S')}_{cfg.env.shape_type}"
@@ -25,12 +26,8 @@ def main(cfg: DictConfig) -> None:
         run_name += f"_r{cfg.env.circle.radius}"
 
     wandb.init(
-        project=cfg.base.project_name +
-        "-torchrl_formations",
-        config=OmegaConf.to_container(
-            cfg,
-            resolve=True,
-            throw_on_missing=True),
+        project=cfg.base.project_name + "-torchrl_formations",
+        config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
         name=run_name,
         save_code=True,
     )
@@ -67,8 +64,7 @@ def main(cfg: DictConfig) -> None:
     def create_env_fn_for_collector():
         return FormationEnv(cfg=cfg, device=device)
 
-    actor_network, value_network = create_ppo_actor_critic(
-        cfg, proof_env_instance)
+    actor_network, value_network = create_ppo_actor_critic(cfg, proof_env_instance)
     actor_network = actor_network.to(device)
     value_network = value_network.to(device)
 
@@ -113,8 +109,7 @@ def main(cfg: DictConfig) -> None:
 
     recent_rewards_for_early_stop = []
     early_stop_patience = cfg.algo.get("early_stop_patience", 20)
-    early_stop_reward_thresh = cfg.algo.get(
-        "early_stop_reward_threshold", 0.95)
+    early_stop_reward_thresh = cfg.algo.get("early_stop_reward_threshold", None)
 
     for i, data_batch_from_collector in enumerate(collector):
         current_frames_collected_this_iter = data_batch_from_collector.numel()

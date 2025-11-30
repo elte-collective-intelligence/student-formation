@@ -7,7 +7,7 @@ arena_size: 10
 max_steps: 5000
 
 # -------- SHAPE ----------
-shape_type: polygon
+shape_type: circle
 
 circle:
   center: [0.0, 0.0]
@@ -24,6 +24,9 @@ star:
   r1: 1.0
   r2: 2.0
   n_points: 5
+
+# -------- ASSIGNMENT METHOD ----------
+assignment_method: hungarian  # Options: "hungarian", "greedy"
 
 # -------- OBSERVATIONS ----------
 obs_keys_for_actor:

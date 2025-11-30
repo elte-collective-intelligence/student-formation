@@ -7,6 +7,7 @@ from torchrl.data.tensor_specs import (
     BoundedTensorSpec as Bounded,
     DiscreteTensorSpec,
 )
+from scipy.optimize import linear_sum_assignment
 import numpy as np
 import pygame  # For rendering
 import pygame.gfxdraw
@@ -57,6 +58,15 @@ class FormationEnv(EnvBase):
         self.shape_type = cfg.env.get("shape_type", "circle")
         self.target_shape = self.__create_shape()
 
+        # Assignment strategy
+        self.assignment_method = cfg.env.get("assignment_method", "greedy")
+        self.shape_boundary_points = self.target_shape.get_target_points(
+            self.num_agents
+        )
+        self.assigned_target_positions = torch.zeros(
+            self.num_agents, 2, device=self.device
+        )
+
         self._make_specs()
         self.actor_obs_keys = cfg.env.obs_keys_for_actor
 
@@ -92,8 +102,24 @@ class FormationEnv(EnvBase):
         else:
             raise ValueError(f"Unsupported shape_type: {self.shape_type}")
 
+    def __update_assignments(self):
+        dists = torch.cdist(self.agent_positions, self.shape_boundary_points)
+        if self.assignment_method == "hungarian":
+            cost_matrix = dists.cpu().numpy()
+            row_ind, col_ind = linear_sum_assignment(cost_matrix)
+            assignments = sorted(zip(row_ind, col_ind), key=lambda x: x[0])
+            sorted_col_ind = [x[1] for x in assignments]
+
+            assigned_indices = torch.tensor(sorted_col_ind, device=self.device)
+            self.assigned_target_positions = self.shape_boundary_points[
+                assigned_indices
+            ]
+        elif self.assignment_method == "greedy":
+            vals, indices = torch.min(dists, dim=1)
+            self.assigned_target_positions = self.shape_boundary_points[indices]
+
     def _make_specs(self) -> None:
-        obs_dim_per_agent = 4
+        obs_dim_per_agent = 5  # sdf(1) + target_vec(2) + closest_agent_vec(2)
         self.observation_spec = Composite(
             {
                 "observation": Unbounded(
@@ -115,9 +141,8 @@ class FormationEnv(EnvBase):
         )
 
     def _get_observations(self) -> torch.Tensor:
-        observations = torch.zeros(self.num_agents, 4, device=self.device)
-        # vec_to_center = self.current_target_center.unsqueeze(0) - self.agent_positions
-        vec_to_center = self.target_shape.center.unsqueeze(0) - self.agent_positions
+        sdf = self.target_shape.signed_distance(self.agent_positions).unsqueeze(1)
+
         dist_matrix = torch.cdist(self.agent_positions, self.agent_positions)
         dist_matrix.fill_diagonal_(float("inf"))
         if self.num_agents > 1:
@@ -126,8 +151,12 @@ class FormationEnv(EnvBase):
             vec_to_closest = closest_agent_positions - self.agent_positions
         else:
             vec_to_closest = torch.zeros_like(self.agent_positions)
-        observations[:, :2] = vec_to_center
-        observations[:, 2:] = vec_to_closest
+
+        target_vec = self.assigned_target_positions - self.agent_positions
+
+        observations = torch.cat(
+            [sdf, target_vec, vec_to_closest], dim=1
+        )  # [N, 1+2+2=5]
         return observations
 
     def _reset(self, tensordict: TensorDictBase = None) -> TensorDictBase:
@@ -137,6 +166,7 @@ class FormationEnv(EnvBase):
             torch.rand(self.num_agents, 2, device=self.device) * (max_val - min_val)
         ) + min_val
         self.agent_velocities = torch.zeros(self.num_agents, 2, device=self.device)
+        self.__update_assignments()
         current_observations = self._get_observations()
         done_val = torch.zeros(
             (self.num_agents, 1), dtype=torch.bool, device=self.device
@@ -156,6 +186,18 @@ class FormationEnv(EnvBase):
         sdf = self.target_shape.signed_distance(self.agent_positions).unsqueeze(1)
         formation_accuracy_reward = torch.exp(-5.0 * sdf**2)
         rewards += formation_accuracy_reward
+
+        dist_to_assigned = torch.norm(
+            self.assigned_target_positions - self.agent_positions, dim=1, keepdim=True
+        )
+        assignment_accuracy_reward = torch.exp(-2.0 * dist_to_assigned**2)
+        rewards += assignment_accuracy_reward
+
+        # # Velocity damping
+        # velocity_penalty = -0.05 * torch.norm(
+        #     self.agent_velocities, dim=1, keepdim=True
+        # )
+        # rewards += velocity_penalty
 
         # Boundary penalty (from your MPE code, applied universally)
         # This assumes arena is roughly [-1, 1] if boundary is 0.9
@@ -192,6 +234,7 @@ class FormationEnv(EnvBase):
 
     def _step(self, tensordict: TensorDictBase) -> TensorDictBase:
         self.current_step += 1
+        self.__update_assignments()
         actions = tensordict["action"]
         force = actions * self.agent_accel
         self.agent_velocities += force * self.dt

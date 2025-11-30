@@ -1,5 +1,6 @@
 import torch
 import math
+import numpy as np
 
 
 class Shape:
@@ -7,6 +8,9 @@ class Shape:
         self.device = device
 
     def signed_distance(self, points: torch.Tensor) -> torch.Tensor:
+        raise NotImplementedError("Must be implemented in subclasses")
+
+    def get_target_points(self, num_points: int) -> torch.Tensor:
         raise NotImplementedError("Must be implemented in subclasses")
 
 
@@ -19,6 +23,13 @@ class Circle(Shape):
     def signed_distance(self, points: torch.Tensor) -> torch.Tensor:
         dist_to_center = torch.norm(points - self.center, dim=-1)
         return dist_to_center - self.radius
+
+    def get_target_points(self, num_agents: int) -> torch.Tensor:
+        angles = torch.linspace(0, 2 * np.pi, num_agents + 1)[:-1]
+        positions = self.center + self.radius * torch.stack(
+            [torch.cos(angles), torch.sin(angles)], dim=1
+        ).to(self.device)
+        return positions
 
 
 class Polygon(Shape):
@@ -43,7 +54,67 @@ class Polygon(Shape):
             sd_list.append(proj_length)
 
         sd_stack = torch.stack(sd_list, dim=-1)
-        return torch.min(sd_stack, dim=-1).values
+        min_sd = torch.min(sd_stack, dim=-1).values
+
+        # Check if point is inside using ray casting for non-convex support
+        def point_in_polygon(p):
+            inside = torch.zeros(p.shape[0], dtype=torch.bool, device=self.device)
+            for i in range(num_vertices):
+                v0 = self.vertices[i]
+                v1 = self.vertices[(i + 1) % num_vertices]
+                cond = ((v0[1] > p[:, 1]) != (v1[1] > p[:, 1])) & (
+                    p[:, 0]
+                    < (v1[0] - v0[0]) * (p[:, 1] - v0[1]) / (v1[1] - v0[1]) + v0[0]
+                )
+                inside ^= cond
+            return inside
+
+        is_inside = point_in_polygon(points)
+        return torch.where(is_inside, -min_sd, min_sd)
+
+    def get_target_points(self, num_agents: int) -> torch.Tensor:
+        """
+        Distribute agents along polygon perimeter.
+        Works for both convex and non-convex polygons.
+        """
+        num_vertices = self.vertices.shape[0]
+
+        if num_agents <= num_vertices:
+            # If fewer agents than vertices, use first N vertices
+            return self.vertices[:num_agents]
+
+        # Otherwise, interpolate along perimeter
+        positions = []
+
+        for i in range(num_agents):
+            # Normalize position along perimeter [0, 1)
+            t = i / num_agents
+
+            # Which edge are we on?
+            edge_idx = t * num_vertices
+            v1_idx = int(edge_idx) % num_vertices
+            v2_idx = (v1_idx + 1) % num_vertices
+
+            # Interpolation factor along edge
+            alpha = edge_idx - int(edge_idx)
+
+            v1 = self.vertices[v1_idx]
+            v2 = self.vertices[v2_idx]
+
+            # Linear interpolation
+            pos = (1.0 - alpha) * v1 + alpha * v2
+            positions.append(pos)
+
+        result = torch.stack(positions)
+
+        # Sanity check
+        if torch.isnan(result).any() or torch.isinf(result).any():
+            print(f"WARNING: Invalid values in polygon target points.")
+            result = self.vertices[
+                torch.arange(num_agents, device=self.device) % num_vertices
+            ]
+
+        return result
 
 
 def make_star_vertices(center, r1, r2, n_points):
