@@ -216,9 +216,13 @@ def main(cfg: DictConfig) -> None:
             num_episodes=10,
             render=False
         )
-        print(aggregated_metrics)
-        
-        print("Aggregated Metrics from Evaluation:", aggregated_metrics)
+        # print(aggregated_metrics)
+        wandb.log({
+                "Evaluation/Boundary_Error_Mean": aggregated_metrics.get("boundary_error_mean", 0),
+                "Evaluation/Boundary_Error_Max": aggregated_metrics.get("boundary_error_max", 0),
+                "Evaluation/Agents_On_Boundary_Pct": aggregated_metrics.get("agents_on_boundary_pct", 0),
+            })
+
     except Exception as e:
         print(f"Evaluation with metrics failed: {e}")
 

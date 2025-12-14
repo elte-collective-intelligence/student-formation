@@ -46,6 +46,9 @@ class FormationEnv(EnvBase):
         self.agent_size_world_units = cfg.env.get(
             "agent_size", 0.05
         )  # Diameter in world units
+        # Backward/compatibility alias used by some evaluation utilities.
+        # Kept as the same unit/meaning as `agent_size_world_units` (diameter).
+        self.agent_size = self.agent_size_world_units
         self.agent_accel = cfg.env.get("agent_accel", 3.0)
         self.agent_max_speed = cfg.env.get("agent_max_speed", 0.3)
         self.dt = 0.1
