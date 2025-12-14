@@ -15,6 +15,7 @@ from torchrl.objectives.value import GAE
 from torch.utils.tensorboard import SummaryWriter
 import tqdm
 import tensordict
+import glob
 
 # Imports assuming main.py is in the root, and src is a package in the root
 from src.envs.env import FormationEnv
@@ -99,15 +100,24 @@ def main(cfg: DictConfig) -> None:
 
     # Create PPO model
     actor, critic = create_ppo_actor_critic(cfg, env)
-
-    # Load a trained policy (assumes you have some loading mechanism)
+    
+    # Select the model from wandb
     model_path = "./wandb/latest-run/files/models/actor_network.pt"
     if os.path.exists(model_path):
         print(f"Loading model from: {model_path}")
         state_dict = torch.load(model_path, map_location=device)
         actor.load_state_dict(state_dict)
     else:
-        print("WARNING: Model not found. Running random weights.")
+        # Load a trained model from wandb, if latest-run does not exist
+        run_dirs = glob.glob(os.path.join("wandb", "run-*"))
+        latest_run = max(run_dirs, key=os.path.getmtime, default="42")
+        if latest_run == "42":
+            print("WARNING: No trained model found. Running random weights.")
+        else:
+            model_path = os.path.join(latest_run, "files", "models", "actor_network.pt")
+            print(f"Loading model from: {model_path}")
+            state_dict = torch.load(model_path, map_location=device)
+            actor.load_state_dict(state_dict)
 
     # Evaluation + Logging positions
     positions_over_time = []
