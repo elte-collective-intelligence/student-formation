@@ -14,6 +14,7 @@ import numpy as np  # For reward averaging in early stopping
 
 from src.envs.env import FormationEnv
 from src.agents.ppo_agent import create_ppo_actor_critic
+from src.rollout.evaluator import evaluate_with_metrics
 
 
 @hydra.main(
@@ -204,6 +205,22 @@ def main(cfg: DictConfig) -> None:
     pbar.close()
     collector.shutdown()
     writer.close()
+    
+    # Call evaluation with metrics
+    print("Evaluate trained policy with formation metrics")
+
+    try:
+        aggregated_metrics = evaluate_with_metrics(
+            proof_env_instance, 
+            actor_network, 
+            num_episodes=10,
+            render=False
+        )
+        print(aggregated_metrics)
+        
+        print("Aggregated Metrics from Evaluation:", aggregated_metrics)
+    except Exception as e:
+        print(f"Evaluation with metrics failed: {e}")
 
     if proof_env_instance is not None:
         # Check if the render test might have already closed it and nulled pygame
