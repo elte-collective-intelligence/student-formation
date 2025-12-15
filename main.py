@@ -224,6 +224,8 @@ def main(cfg: DictConfig) -> None:
                 "Evaluation/Uniformity_Mean": aggregated_metrics.get("uniformity_nn_distance_mean", 0),
                 "Evaluation/Uniformity_Std": aggregated_metrics.get("uniformity_nn_distance_std", 0),
                 "Evaluation/Uniformity_Coefficient": aggregated_metrics.get("uniformity_coefficient", 0),
+                "Evaluation/Collision_Count": aggregated_metrics.get("collision_count", 0),
+                "Evaluation/Collision_Rate_Pct": aggregated_metrics.get("collision_rate_pct", 0),
             })
 
     except Exception as e:
