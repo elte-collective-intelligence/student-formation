@@ -216,15 +216,15 @@ def main(cfg: DictConfig) -> None:
             num_episodes=10,
             render=False
         )
-        # print(aggregated_metrics)
+        
         wandb.log({
                 "Evaluation/Boundary_Error_Mean": aggregated_metrics.get("boundary_error_mean", 0),
                 "Evaluation/Boundary_Error_Max": aggregated_metrics.get("boundary_error_max", 0),
-                "Evaluation/Agents_On_Boundary_Pct": aggregated_metrics.get("agents_on_boundary_pct", 0),
+                "Evaluation/Agents_On_Boundary_Pct": str(aggregated_metrics.get("agents_on_boundary_pct", 0)) + "%",
                 "Evaluation/Uniformity_Mean": aggregated_metrics.get("uniformity_nn_distance_mean", 0),
                 "Evaluation/Uniformity_Std": aggregated_metrics.get("uniformity_nn_distance_std", 0),
                 "Evaluation/Uniformity_Coefficient": aggregated_metrics.get("uniformity_coefficient", 0),
-                "Evaluation/Collision_Count": aggregated_metrics.get("collision_count", 0),
+                "Evaluation/Collision_Count_Mean": str(aggregated_metrics.get("collision_count", 0)) + " collisions",
                 "Evaluation/Collision_Rate_Pct": aggregated_metrics.get("collision_rate_pct", 0),
             })
 

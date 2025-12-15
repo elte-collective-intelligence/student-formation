@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 class FormationMetrics:
 
     def __init__(self, env, device="cpu"):
+        # Initialize with environment and device
         self.env = env
         self.device = device
         self.num_agents = env.num_agents
@@ -13,6 +14,7 @@ class FormationMetrics:
         self.arena_size = env.arena_size
         
     def _unwrap_next(self, tensordict):
+        # Helper to get next state from transition tensordict
         next_td = tensordict.get("next", None)
         return next_td if next_td is not None else tensordict
         
@@ -44,6 +46,7 @@ class FormationMetrics:
         self, agent_positions: torch.Tensor
     ) -> Dict[str, float]:
         
+        # Check for minimum agents
         if self.num_agents < 2:
             return {
                 "uniformity_nn_distance_mean": 0.0,
@@ -58,6 +61,7 @@ class FormationMetrics:
         # Get nearest neighbor distance for each agent
         nn_distances, _ = torch.min(dist_matrix, dim=1)
 
+        # Compute mean and std of nnn distances
         mean_nn = nn_distances.mean().item()
         std_nn = nn_distances.std().item() if len(nn_distances) > 1 else 0.0
 
@@ -75,15 +79,18 @@ class FormationMetrics:
         self, agent_positions: torch.Tensor, collision_threshold: Optional[float] = None
     ) -> Dict[str, float]:
         
+        # Create a default collision threshold
         if collision_threshold is None:
             collision_threshold = 1.5 * self.agent_size_world_units
 
+        # Check for minimum agents
         if self.num_agents < 2:
             return {
                 "collision_count": 0,
                 "collision_rate_pct": 0.0,
             }
 
+        # Create pairwise distance matrix
         dist_matrix = torch.cdist(agent_positions, agent_positions)
         dist_matrix.fill_diagonal_(float("inf"))
 
@@ -92,6 +99,7 @@ class FormationMetrics:
         total_pairs = (self.num_agents * (self.num_agents - 1)) // 2
         collision_rate = (colliding_pairs / max(total_pairs, 1)) * 100.0
 
+        # The collision count can be 0, if no agents collide
         metrics = {
             "collision_count": int(colliding_pairs),
             "collision_rate_pct": collision_rate,
@@ -104,7 +112,6 @@ class FormationMetrics:
     ) -> Dict[str, any]:
         
         episode_metrics = []
-
         for ep in range(num_episodes):
             metrics_per_step = {
                 "boundary_errors": [],
@@ -113,20 +120,21 @@ class FormationMetrics:
             }
 
             td = self.env.reset()
-
-            steps_limit = max(1, int(self.env.max_steps))
-            for step in range(3):
+            steps_limit = min(500, int(self.env.max_steps))
+            for step in range(steps_limit):
                 # Get action from policy
                 with torch.no_grad():
                     td_policy = td.select(*policy.in_keys)
                     policy(td_policy)
 
+                # Prepare action tensordict
                 td_step = TensorDict(
                     {"action": td_policy["action"]},
                     batch_size=[self.num_agents],
                     device=self.device,
                 )
 
+                # Step the environment
                 transition_td = self.env.step(td_step)
                 next_td = self._unwrap_next(transition_td)
 
