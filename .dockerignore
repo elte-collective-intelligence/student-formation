@@ -1,0 +1,5 @@
+# Ignore large folders for the Docker build, it fails otherwise
+
+wandb/
+outputs/
+multirun/
