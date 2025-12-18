@@ -27,38 +27,59 @@ def generate_formation_gif(
 ):
     fig, ax = plt.subplots(figsize=(6, 6))
 
-    # Draw target shape
-    if cfg.env.shape_type == "circle":
-        center = cfg.env.circle.center  # [0.0, 0.0]
-        radius = cfg.env.circle.radius
-        shape_patch = plt.Circle(
-            tuple(center), radius, color="r", fill=False, linestyle="--", alpha=0.3
-        )
-        ax.add_artist(shape_patch)
-    elif cfg.env.shape_type == "star":
-        verts = make_star_vertices(
-            center=cfg.env.star.center,
-            r1=cfg.env.star.r1,
-            r2=cfg.env.star.r2,
-            n_points=cfg.env.star.n_points,
-        )
-        shape_patch = plt.Polygon(
-            verts, closed=True, color="r", fill=False, linestyle="--", alpha=0.3
-        )
-        ax.add_artist(shape_patch)
-    elif cfg.env.shape_type == "polygon":
-        verts = cfg.env.polygon.vertices
-        shape_patch = plt.Polygon(
-            verts, closed=True, color="r", fill=False, linestyle="--", alpha=0.3
-        )
-        ax.add_artist(shape_patch)
-    else:
-        raise ValueError("Unknown shape type for visualization")
+    # Store active patches to remove them later
+    current_patches = []
 
-    # Agent Scatter (Blue)
+    def get_shape_patches(config_source):
+        """Generates a list of Matplotlib artists from a config block."""
+        patches = []
+
+        # Normalize: if it's a single shape, wrap it in a list so we can iterate
+        if config_source.shape_type == "multishape":
+            shape_configs = config_source.multishape
+        else:
+            shape_configs = [{"type": config_source.shape_type, **config_source}]
+            if config_source.shape_type == "circle":
+                shape_configs = [config_source.circle]
+                shape_configs[0]["type"] = "circle"
+            elif config_source.shape_type == "polygon":
+                shape_configs = [config_source.polygon]
+                shape_configs[0]["type"] = "polygon"
+            elif config_source.shape_type == "star":
+                shape_configs = [config_source.star]
+                shape_configs[0]["type"] = "star"
+
+        for s in shape_configs:
+            if s.type == "circle":
+                p = plt.Circle(
+                    tuple(s.center),
+                    s.radius,
+                    color="r",
+                    fill=False,
+                    linestyle="--",
+                    alpha=0.3,
+                )
+                patches.append(p)
+            elif s.type == "polygon":
+                p = plt.Polygon(
+                    s.vertices,
+                    closed=True,
+                    color="r",
+                    fill=False,
+                    linestyle="--",
+                    alpha=0.3,
+                )
+                patches.append(p)
+            elif s.type == "star":
+                verts = make_star_vertices(s.center, s.r1, s.r2, s.n_points)
+                p = plt.Polygon(
+                    verts, closed=True, color="r", fill=False, linestyle="--", alpha=0.3
+                )
+                patches.append(p)
+        return patches
+
+    # Setup Scatters
     scat_agents = ax.scatter([], [], s=100, c="blue", label="Agents", zorder=5)
-
-    # Target Scatter (Green X)
     scat_targets = ax.scatter(
         [], [], s=50, c="green", marker="x", label="Targets", zorder=4
     )
@@ -66,18 +87,41 @@ def generate_formation_gif(
     def init():
         ax.set_xlim(-6, 6)
         ax.set_ylim(-6, 6)
-        return (scat_agents, scat_targets)
+        return scat_agents, scat_targets
 
     def update(frame):
-        coords = agent_trajectories[frame]  # List of (x, y)
-        scat_agents.set_offsets(coords)
-        target_coords = target_trajectories[frame]
-        scat_targets.set_offsets(target_coords)
+        scat_agents.set_offsets(agent_trajectories[frame])
+        scat_targets.set_offsets(target_trajectories[frame])
 
-        return (scat_agents, scat_targets)
+        reconfig_step = cfg.env.get("reconfig_step", None)
+
+        needs_redraw = (frame == 0) or (
+            reconfig_step is not None and frame == reconfig_step
+        )
+
+        if needs_redraw:
+            for p in current_patches:
+                p.remove()
+            current_patches.clear()
+
+            if (
+                reconfig_step is not None
+                and frame >= reconfig_step
+                and "reconfig_shape" in cfg.env
+            ):
+                source = cfg.env.reconfig_shape
+            else:
+                source = cfg.env  # Initial state
+
+            new_patches = get_shape_patches(source)
+            for p in new_patches:
+                ax.add_artist(p)
+                current_patches.append(p)
+
+        return scat_agents, scat_targets, *current_patches
 
     ani = animation.FuncAnimation(
-        fig, update, frames=len(agent_trajectories), init_func=init, blit=True
+        fig, update, frames=len(agent_trajectories), init_func=init, blit=False
     )
     ani.save(filename, writer="pillow", fps=30)
     plt.close(fig)

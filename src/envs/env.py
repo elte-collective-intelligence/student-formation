@@ -1,3 +1,4 @@
+from turtle import st
 import torch
 from tensordict import TensorDict, TensorDictBase
 from torchrl.envs import EnvBase
@@ -14,6 +15,7 @@ import pygame.gfxdraw
 
 from src.envs.shapes import (
     Circle,
+    MultiShape,
     Polygon,
     make_star_vertices,
 )  # For anti-aliased shapes
@@ -54,9 +56,13 @@ class FormationEnv(EnvBase):
         self.agent_velocities = torch.zeros(self.num_agents, 2, device=self.device)
         self.current_step = 0
 
+        # Reconfiguration step
+        self.reconfig_step = cfg.env.get("reconfig_step", None)
+        self.has_reconfigured = False
+
         # Shape configuration
         self.shape_type = cfg.env.get("shape_type", "circle")
-        self.target_shape = self.__create_shape()
+        self.target_shape = self.__create_shape(self.shape_type, cfg.env)
 
         # Assignment strategy
         self.assignment_method = cfg.env.get("assignment_method", "greedy")
@@ -79,28 +85,72 @@ class FormationEnv(EnvBase):
         self.render_initialized = False
         self.window_closed_by_user = False
 
-    def __create_shape(self):
-        if self.shape_type == "circle":
-            return Circle(
-                center=self.cfg.env.circle.center,
-                radius=self.cfg.env.circle.radius,
+    def __create_shape(self, shape_type, cfg):
+        if shape_type == "circle":
+            # Look inside the source for 'circle' params
+            c_cfg = cfg.circle
+            return Circle(c_cfg.center, c_cfg.radius, self.device)
+
+        elif shape_type == "polygon":
+            # Look inside source for 'polygon' params
+            verts = torch.tensor(
+                cfg.polygon.vertices,
                 device=self.device,
+                dtype=torch.float32,
             )
-        elif self.shape_type == "polygon":
-            vertices = torch.tensor(
-                self.cfg.env.polygon.vertices, device=self.device, dtype=torch.float32
-            )
-            return Polygon(vertices, device=self.device)
-        elif self.shape_type == "star":
-            # star has center, r1, r2, num_points
-            center = self.cfg.env.star.center
-            r1 = self.cfg.env.star.r1
-            r2 = self.cfg.env.star.r2
-            n_points = self.cfg.env.star.n_points
-            vertices = make_star_vertices(center, r1, r2, n_points)
-            return Polygon(vertices, device=self.device)
+            return Polygon(verts, device=self.device)
+
+        elif shape_type == "star":
+            s_cfg = cfg.star
+            verts = make_star_vertices(s_cfg.center, s_cfg.r1, s_cfg.r2, s_cfg.n_points)
+            return Polygon(verts, device=self.device)
+
+        elif shape_type == "multishape":
+            sub_shapes = []
+            counts = []
+            # Look inside source for 'multishape' list
+            for s_cfg in cfg.multishape:
+                t = s_cfg.type
+                counts.append(s_cfg.agent_count)
+
+                if t == "circle":
+                    s = Circle(s_cfg.center, s_cfg.radius, self.device)
+                elif t == "polygon":
+                    v = torch.tensor(
+                        s_cfg.vertices, device=self.device, dtype=torch.float32
+                    )
+                    s = Polygon(v, device=self.device)
+                elif t == "star":
+                    # Assume star params are inline in the list item
+                    v = make_star_vertices(
+                        s_cfg.center, s_cfg.r1, s_cfg.r2, s_cfg.n_points
+                    )
+                    s = Polygon(
+                        torch.tensor(v, device=self.device, dtype=torch.float32),
+                        self.device,
+                    )
+                sub_shapes.append(s)
+
+            return MultiShape(sub_shapes, counts, self.device)
+
         else:
-            raise ValueError(f"Unsupported shape_type: {self.shape_type}")
+            raise ValueError(f"Unsupported shape_type: {shape_type}")
+
+    def _trigger_reconfiguration(self):
+        if "reconfig_shape" in self.cfg.env:
+            # 1. Get the new config block
+            new_cfg = self.cfg.env.reconfig_shape
+            new_type = new_cfg.shape_type
+
+            # 2. Build shape using that block
+            self.shape_type = new_type
+            self.target_shape = self.__create_shape(new_type, new_cfg)
+
+            # 3. Update Targets
+            self.shape_boundary_points = self.target_shape.get_target_points(
+                self.num_agents
+            )
+            self.__update_assignments()
 
     def __update_assignments(self):
         dists = torch.cdist(self.agent_positions, self.shape_boundary_points)
@@ -157,10 +207,24 @@ class FormationEnv(EnvBase):
         observations = torch.cat(
             [sdf, target_vec, vec_to_closest], dim=1
         )  # [N, 1+2+2=5]
+
+        # Safety check
+        observations = torch.nan_to_num(
+            observations, nan=0.0, posinf=100.0, neginf=-100.0
+        )
+        observations = torch.clamp(observations, -100.0, 100.0)
+
         return observations
 
     def _reset(self, tensordict: TensorDictBase = None) -> TensorDictBase:
         self.current_step = 0
+
+        self.shape_type = self.cfg.env.get("shape_type", "circle")
+        self.target_shape = self.__create_shape(self.shape_type, self.cfg.env)
+        self.shape_boundary_points = self.target_shape.get_target_points(
+            self.num_agents
+        )
+
         min_val, max_val = -self.arena_size / 2, self.arena_size / 2
         self.agent_positions = (
             torch.rand(self.num_agents, 2, device=self.device) * (max_val - min_val)
@@ -192,12 +256,6 @@ class FormationEnv(EnvBase):
         )
         assignment_accuracy_reward = torch.exp(-2.0 * dist_to_assigned**2)
         rewards += assignment_accuracy_reward
-
-        # # Velocity damping
-        # velocity_penalty = -0.05 * torch.norm(
-        #     self.agent_velocities, dim=1, keepdim=True
-        # )
-        # rewards += velocity_penalty
 
         # Boundary penalty (from your MPE code, applied universally)
         # This assumes arena is roughly [-1, 1] if boundary is 0.9
@@ -234,6 +292,13 @@ class FormationEnv(EnvBase):
 
     def _step(self, tensordict: TensorDictBase) -> TensorDictBase:
         self.current_step += 1
+
+        # Check for reconfiguration
+        if self.reconfig_step and self.current_step == self.reconfig_step:
+            if not self.has_reconfigured:
+                self._trigger_reconfiguration()
+                self.has_reconfigured = True
+
         self.__update_assignments()
         actions = tensordict["action"]
         force = actions * self.agent_accel
@@ -327,15 +392,20 @@ class FormationEnv(EnvBase):
         self.screen.fill((255, 255, 255))
 
         # --- Draw Target Shape ---
-        if isinstance(self.target_shape, Circle):
-            s_center = self._to_screen_coords(self.target_shape.center.unsqueeze(0))[0]
-            s_radius = int(self.target_shape.radius * self.render_scale)
-            pygame.gfxdraw.aacircle(
-                self.screen, s_center[0], s_center[1], s_radius, (200, 200, 200)
-            )
-        elif isinstance(self.target_shape, Polygon):
-            verts = self._to_screen_coords(self.target_shape.vertices)
-            pygame.draw.aalines(self.screen, (200, 200, 200), True, verts.tolist())
+        def draw_one(s):
+            if isinstance(s, Circle):
+                c = self._to_screen_coords(s.center.unsqueeze(0))[0]
+                r = int(s.radius * self.render_scale)
+                pygame.gfxdraw.aacircle(self.screen, c[0], c[1], r, (200, 200, 200))
+            elif isinstance(s, Polygon):
+                v = self._to_screen_coords(s.vertices)
+                pygame.draw.aalines(self.screen, (200, 200, 200), True, v.tolist())
+
+        if isinstance(self.target_shape, MultiShape):
+            for sub_s in self.target_shape.shapes:
+                draw_one(sub_s)
+        else:
+            draw_one(self.target_shape)
 
         # --- Draw Agents ---
         agent_screen_pos = self._to_screen_coords(self.agent_positions)

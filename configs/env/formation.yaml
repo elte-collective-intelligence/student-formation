@@ -7,7 +7,7 @@ arena_size: 10
 max_steps: 5000
 
 # -------- SHAPE ----------
-shape_type: circle
+shape_type: multishape  # Options: "circle", "polygon", "star", "multishape"
 
 circle:
   center: [0.0, 0.0]
@@ -25,8 +25,30 @@ star:
   r2: 2.0
   n_points: 5
 
+multishape:
+  - type: circle
+    center: [-3.0, 0.0]
+    radius: 1.5
+    agent_count: 5
+  - type: polygon
+    vertices: [[2.0, 2.0], [4.0, -1.0], [2.0, -1.0]]
+    agent_count: 5
+
 # -------- ASSIGNMENT METHOD ----------
 assignment_method: hungarian  # Options: "hungarian", "greedy"
+
+# -------- RECONFIGURATION ----------
+reconfig_step: 200
+reconfig_shape:
+  shape_type: multishape
+  multishape:
+    - type: polygon
+      vertices: [[-4.0, 0.0], [-2.0, 0.0], [-2.0, -2.0], [-4.0, -2.0]] 
+      agent_count: 5
+    - type: circle
+      center: [3.0, 0.0]
+      radius: 1.5
+      agent_count: 5
 
 # -------- OBSERVATIONS ----------
 obs_keys_for_actor:
