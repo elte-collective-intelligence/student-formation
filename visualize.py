@@ -144,7 +144,7 @@ def main(cfg: DictConfig) -> None:
 
     # Create PPO model
     actor, critic = create_ppo_actor_critic(cfg, env)
-    
+
     # Select the model from wandb
     model_path = "./wandb/latest-run/files/models/actor_network.pt"
     if os.path.exists(model_path):
