@@ -109,12 +109,41 @@ class Polygon(Shape):
 
         # Sanity check
         if torch.isnan(result).any() or torch.isinf(result).any():
-            print(f"WARNING: Invalid values in polygon target points.")
+            print("WARNING: Invalid values in polygon target points.")
             result = self.vertices[
                 torch.arange(num_agents, device=self.device) % num_vertices
             ]
 
         return result
+
+
+class MultiShape(Shape):
+    def __init__(self, shape_list, agent_counts, device):
+        super().__init__(device)
+        self.shapes = shape_list
+        self.agent_counts = agent_counts  # List[int], e.g. [5, 5]
+
+    def signed_distance(self, points: torch.Tensor) -> torch.Tensor:
+        # The SDF of a union is the minimum SDF of its parts
+        sdfs = []
+        for shape in self.shapes:
+            sdfs.append(shape.signed_distance(points))
+
+        # Stack [N_shapes, N_agents] and take min
+        sdf_stack = torch.stack(sdfs, dim=0)
+        return torch.min(sdf_stack, dim=0).values
+
+    def get_target_points(self, num_agents: int) -> torch.Tensor:
+        # Concatenate targets from all sub-shapes
+        # Note: We ignore 'num_agents' arg here and use the fixed 'agent_counts'
+        # defined in the config to ensure stability.
+        all_targets = []
+        for i, shape in enumerate(self.shapes):
+            count = self.agent_counts[i]
+            pts = shape.get_target_points(count)
+            all_targets.append(pts)
+
+        return torch.cat(all_targets, dim=0)
 
 
 def make_star_vertices(center, r1, r2, n_points):

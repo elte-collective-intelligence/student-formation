@@ -135,11 +135,25 @@ def main(cfg: DictConfig) -> None:
             entropy_loss = loss_td["loss_entropy"]
             total_loss = actor_objective_loss + critic_loss + entropy_loss
 
+            # Safety check for NaN or Inf losses
+            if torch.isnan(total_loss) or torch.isinf(total_loss):
+                print(
+                    f"WARNING: Skipped batch with NaN loss! Actor: {actor_objective_loss.item()}, Critic: {critic_loss.item()}"
+                )
+                continue  # Skip backward pass
+
             optimizer.zero_grad()
             total_loss.backward()
             # Optional: Gradient clipping
-            # torch.nn.utils.clip_grad_norm_(loss_module.parameters(), max_norm=cfg.algo.get("max_grad_norm", 1.0))
+            grad_norm = torch.nn.utils.clip_grad_norm_(
+                loss_module.parameters(), max_norm=cfg.algo.get("max_grad_norm", 0.5)
+            )
             optimizer.step()
+
+            # Safety check for NaN gradients
+            if torch.isnan(grad_norm):
+                print("WARNING: Skipped update with NaN gradients!")
+                continue
 
             avg_actor_loss_iter += actor_objective_loss.item()
             avg_critic_loss_iter += critic_loss.item()
