@@ -109,7 +109,7 @@ class Polygon(Shape):
 
         # Sanity check
         if torch.isnan(result).any() or torch.isinf(result).any():
-            print(f"WARNING: Invalid values in polygon target points.")
+            print("WARNING: Invalid values in polygon target points.")
             result = self.vertices[
                 torch.arange(num_agents, device=self.device) % num_vertices
             ]
