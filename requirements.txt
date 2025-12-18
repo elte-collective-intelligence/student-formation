@@ -8,3 +8,4 @@ imageio
 tqdm
 wandb
 matplotlib
+scipy
