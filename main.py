@@ -14,6 +14,7 @@ import numpy as np  # For reward averaging in early stopping
 
 from src.envs.env import FormationEnv
 from src.agents.ppo_agent import create_ppo_actor_critic
+from src.rollout.evaluator import evaluate_with_metrics
 
 
 @hydra.main(
@@ -218,6 +219,31 @@ def main(cfg: DictConfig) -> None:
     pbar.close()
     collector.shutdown()
     writer.close()
+    
+    # Call evaluation with metrics
+    print("Evaluate trained policy with formation metrics")
+
+    try:
+        aggregated_metrics = evaluate_with_metrics(
+            proof_env_instance, 
+            actor_network, 
+            num_episodes=10,
+            render=False
+        )
+        
+        wandb.log({
+                "Evaluation/Boundary_Error_Mean": aggregated_metrics.get("boundary_error_mean", 0),
+                "Evaluation/Boundary_Error_Max": aggregated_metrics.get("boundary_error_max", 0),
+                "Evaluation/Agents_On_Boundary_Pct": str(aggregated_metrics.get("agents_on_boundary_pct", 0)) + "%",
+                "Evaluation/Uniformity_Mean": aggregated_metrics.get("uniformity_nn_distance_mean", 0),
+                "Evaluation/Uniformity_Std": aggregated_metrics.get("uniformity_nn_distance_std", 0),
+                "Evaluation/Uniformity_Coefficient": aggregated_metrics.get("uniformity_coefficient", 0),
+                "Evaluation/Collision_Count_Mean": str(aggregated_metrics.get("collision_count", 0)) + " collisions",
+                "Evaluation/Collision_Rate_Pct": aggregated_metrics.get("collision_rate_pct", 0),
+            })
+
+    except Exception as e:
+        print(f"Evaluation with metrics failed: {e}")
 
     if proof_env_instance is not None:
         # Check if the render test might have already closed it and nulled pygame

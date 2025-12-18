@@ -1,5 +1,6 @@
 import torch
 from tensordict import TensorDict
+from .metrics import FormationMetrics
 
 
 def evaluate_policy(env, policy, num_episodes=5, max_steps_per_episode=None):
@@ -48,3 +49,12 @@ def evaluate_policy(env, policy, num_episodes=5, max_steps_per_episode=None):
         total_rewards += episode_reward
 
     return total_rewards / num_episodes
+
+
+def evaluate_with_metrics(env, policy, num_episodes=3, render=False):
+    metrics_evaluator = FormationMetrics(env, device=env.device)
+    aggregated = metrics_evaluator.evaluate_episode(
+        policy, num_episodes=num_episodes, render=render
+    )
+
+    return aggregated

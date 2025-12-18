@@ -3,6 +3,7 @@ torch
 tensordict
 hydra-core
 tensorboard
+scipy
 pygame
 imageio
 tqdm
