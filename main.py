@@ -26,10 +26,21 @@ def main(cfg: DictConfig) -> None:
     if cfg.env.shape_type == "circle":
         run_name += f"_r{cfg.env.circle.radius}"
 
+    # When running Hydra MULTIRUN, group with sweep_id as well. => Allow comparing specific multiruns elements.
+    sweep_id = None
+    sweep_job_num = None
+    if str(cfg.hydra.mode).upper() == "MULTIRUN":
+        sweep_id = cfg.base.get("sweep_id", None)
+        sweep_job_num = cfg.base.get("sweep_job_num", None)
+
+    if sweep_job_num is not None:
+        run_name += f"_job{sweep_job_num}"
+
     wandb.init(
         project=cfg.base.project_name + "-torchrl_formations",
         config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
         name=run_name,
+        group=sweep_id,
         save_code=True,
     )
 

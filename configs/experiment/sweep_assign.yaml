@@ -1,0 +1,12 @@
+# @package _global_
+# Multi-run configuration file
+# Ablation: Assignment method
+defaults:
+  - default_exp
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      base.seed: 0,1,2
+      env.assignment_method: greedy,hungarian

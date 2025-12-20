@@ -1,3 +1,7 @@
 seed: 42
 device: "cpu"
 project_name: "marl_formation_torchrl"
+
+# IDs to keep multirun sweeps easy to filter or aggregate on.
+sweep_id: ${hydra.sweep.dir} 
+sweep_job_num: ${hydra.job.num}
