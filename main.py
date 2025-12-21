@@ -30,7 +30,11 @@ def main(cfg: DictConfig) -> None:
     # When running Hydra MULTIRUN, save the Hydra sweep_id and job_num into W&B config from the Hydra runtime metadata.
     sweep_id = None
     sweep_job_num = None
-    if HydraConfig.initialized() and str(HydraConfig.get().mode).upper() == "MULTIRUN":
+    mode_value = HydraConfig.get().mode if HydraConfig.initialized() else None
+    mode_name = (
+        getattr(mode_value, "name", str(mode_value)).upper() if mode_value is not None else ""
+    )
+    if HydraConfig.initialized() and mode_name == "MULTIRUN":
         sweep_id = str(HydraConfig.get().sweep.dir)
         sweep_job_num = HydraConfig.get().job.num
 
