@@ -388,3 +388,37 @@ python -m unittest discover -s test
 - Plotting script to visualize differences between ablations
 - Docker packaging fixes (build context / run command / large-folder issues)
 - Windows-specific test fixes
+
+
+
+## Assignment checklist
+
+- Task 1: Core Functionality 20 pts
+  - [X] SDF interface and three shape families (including one non-convex) 10 pts
+  - [X] Observation and reward redesign with SDF terms (distance, normal/tangent) 5 pts
+  - [X] Success criterion and renderer support for new shapes 5 pts
+
+- Task 2: Assignment Strategies 10 pts
+  - [X] Implement and compare two strategies (Hungarian periodic vs. distributed greedy) 10 pts
+
+- Task 3: Scenarios 10 pts
+  - [X] One multi-shape scene with required allocation 5 pts
+  - [X] One dynamic reconfiguration scenario mid-episode 5 pts
+
+- Task 4: Metrics and Evaluation 10 pts
+  - [X] Implement and report three chosen metrics from the following: Boundary Error, Uniformity, Time-to-Form, Collisions, Generalization, Reconfiguration Time 10 pts
+
+- Task 5: Ablations 10 pts
+  - [X] Run at least two ablations (e.g., geometry features, assignment, reward shaping, curriculum) with fixed seeds and analysis 5+5 pts
+
+- Task 6: Reproducibility Pack 6 pts
+  - [X] Hydra configs for experiments and sweeps 2 pts
+  - [X] Dockerfile builds and runs training/evaluation 2 pts
+  - [X] Two unit/smoke tests (SDF, assignment, env reset/step) 2 pts
+
+- Task 7: Reporting Quality 4 pts
+  - [X] README with quick start, experiment matrix, plots/tables, and failure analysis 4 pts
+
+- Bonus up to +10 pts
+  - [ ] Robustness tests with sensor noise or actuation delay +5 pts
+  - [ ] Additional research feature (e.g., communication, curriculum, new non-convex shape family) +5 pts
