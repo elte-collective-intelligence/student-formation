@@ -241,7 +241,7 @@ Implemented metrics:
 - **Uniformity** (nearest-neighbor distance statistics)
   - Mean / std of nearest-neighbor distances
   - Coefficient of variation (std / mean)
-- **Collisions** (pairwise distance threshold)
+- **Collisions** (collision of agents)
   - Collision count
   - Collision rate as percent of colliding pairs
 
@@ -277,7 +277,7 @@ Hydra writes sweep outputs under:
 
 #### Ablation analysis
 
-For quick aggregation across seeds and variants, use the included offline analysis script. The `--sweep-id` should match the Hydra sweep directory (the `multirun/.../HH-MM-SS` folder).
+For quick aggregation across seeds and variants, use the included analysis script. The `--sweep-id` should match the Hydra sweep directory (the `multirun/.../HH-MM-SS` folder).
 
 Learning rate sweep (group by `algo.lr`):
 
@@ -295,7 +295,7 @@ This prints mean/std for the tracked metrics and writes a `runs.csv` at the repo
 
 #### Charts
 
-To create a simple, presentation-ready chart from the latest `runs.csv` (produced by the offline ablation analysis), use:
+To create a chart from the latest `runs.csv` use:
 
 ```shell
 python scripts/plot_runs_csv.py --csv runs.csv --group algo.lr
@@ -311,8 +311,6 @@ Example ablation plot:
 ![Learning-rate ablation example](docs/charts/ablation_algo.lr.png)
 
 Notes:
-
-- `--exclude-reward` keeps only evaluation metrics (`Evaluation/*`). Training reward (`Reward/MeanRewardInBatch`) is not part of the evaluation metrics section.
 - The arrows next to subplot titles indicate direction of better: `↓` lower is better, `↑` higher is better.
 
 ### Reproducibility pack
@@ -383,10 +381,10 @@ python -m unittest discover -s test
 
 ### Sipos Richard
 
-- Implementation of metrics (Boundary Error/Collision/Uniformity)
+- Implementation of evaluation metrics (Boundary Error / Collisions / Uniformity) + unit tests
 - Hydra multirun support for sweeps and reproducibility
-- Ablation configurations for learning-rate and assignment-method sweeps
-- Ablation analysis producing aggregated metrics + save to CSV
-- Docker packaging fixes (build context / run command / issue of large folders)
-- Update Vizualization's model to consider
-- Fix Windows specific test issues
+- Sweep configurations for learning-rate and assignment-method ablations
+- Ablation analysis producing aggregated metrics + saving results to CSV
+- Plotting script to visualize differences between ablations
+- Docker packaging fixes (build context / run command / large-folder issues)
+- Windows-specific test fixes
