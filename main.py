@@ -1,4 +1,5 @@
 import hydra
+from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 import torch
 import time
@@ -26,10 +27,33 @@ def main(cfg: DictConfig) -> None:
     if cfg.env.shape_type == "circle":
         run_name += f"_r{cfg.env.circle.radius}"
 
+    # When running Hydra MULTIRUN, save the Hydra sweep_id and job_num into W&B config from the Hydra runtime metadata.
+    sweep_id = None
+    sweep_job_num = None
+    mode_value = HydraConfig.get().mode if HydraConfig.initialized() else None
+    mode_name = (
+        getattr(mode_value, "name", str(mode_value)).upper() if mode_value is not None else ""
+    )
+    if HydraConfig.initialized() and mode_name == "MULTIRUN":
+        sweep_id = str(HydraConfig.get().sweep.dir)
+        sweep_job_num = HydraConfig.get().job.num
+
+    if sweep_job_num is not None:
+        run_name += f"_job{sweep_job_num}"
+
+    # Save the config to W&B
+    wandb_config = OmegaConf.to_container(cfg, resolve=False, throw_on_missing=True)
+    if sweep_id is not None:
+        wandb_config.setdefault("base", {})
+        if isinstance(wandb_config["base"], dict):
+            wandb_config["base"]["sweep_id"] = sweep_id
+            wandb_config["base"]["sweep_job_num"] = sweep_job_num
+
     wandb.init(
         project=cfg.base.project_name + "-torchrl_formations",
-        config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
+        config=wandb_config,
         name=run_name,
+        group=sweep_id,
         save_code=True,
     )
 

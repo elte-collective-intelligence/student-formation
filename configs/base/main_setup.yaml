@@ -1,3 +1,7 @@
 seed: 42
 device: "cpu"
 project_name: "marl_formation_torchrl"
+
+# IDs to keep multirun sweeps easy to filter or aggregate on. This Ids are added during runtime from the generated Hydra config.
+sweep_id: null
+sweep_job_num: null

@@ -224,6 +224,142 @@ This script:
 - Generates a GIF of the formation process
 - Displays formation accuracy and episode metrics
 
+Example output GIF:
+
+![Example formation rollout](formation.gif)
+
+
+### Metrics & Evaluation
+
+There are 3 evaluation metrics after training. The evaluation is run at the end of training in `main.py` via `evaluate_with_metrics(...)` (see `src/rollout/evaluator.py` and `src/rollout/metrics.py`) and is logged to W&B.
+
+Implemented metrics:
+
+- **Boundary Error** (SDF distance to the target boundary)
+  - Mean / max boundary error over agents
+  - Percent of agents considered "on boundary"
+- **Uniformity** (nearest-neighbor distance statistics)
+  - Mean / std of nearest-neighbor distances
+  - Coefficient of variation (std / mean)
+- **Collisions** (collision of agents)
+  - Collision count
+  - Collision rate as percent of colliding pairs
+
+W&B keys (logged at the end of training):
+
+- `Evaluation/Boundary_Error_Mean`, `Evaluation/Boundary_Error_Max`, `Evaluation/Agents_On_Boundary_Pct`
+- `Evaluation/Uniformity_Mean`, `Evaluation/Uniformity_Std`, `Evaluation/Uniformity_Coefficient`
+- `Evaluation/Collision_Count_Mean`, `Evaluation/Collision_Rate_Pct`
+
+### Ablations
+
+Two Hydra multirun ablations are included under `configs/experiment/`.
+
+1) **Learning rate ablation** (`configs/experiment/sweep_lr.yaml`)
+
+```shell
+python main.py -m -cn experiment/sweep_lr
+```
+
+This sweep fixes seeds (`base.seed: 0,1,2`), fixes assignment to Hungarian (`env.assignment_method: hungarian`), and varies `algo.lr`.
+
+2) **Assignment method ablation** (`configs/experiment/sweep_assign.yaml`)
+
+```shell
+python main.py -m -cn experiment/sweep_assign
+```
+
+This sweep fixes seeds (`base.seed: 0,1,2`) and varies `env.assignment_method` (`greedy,hungarian`).
+
+Hydra writes sweep outputs under:
+
+- `multirun/YYYY-MM-DD/HH-MM-SS/<job_num>/...`
+
+#### Ablation analysis
+
+For quick aggregation across seeds and variants, use the included analysis script. The `--sweep-id` should match the Hydra sweep directory (the `multirun/.../HH-MM-SS` folder).
+
+Learning rate sweep (group by `algo.lr`):
+
+```shell
+python analyze_ablations.py --group algo.lr --sweep-id "multirun/YYYY-MM-DD/HH-MM-SS"
+```
+
+Assignment method sweep (group by `env.assignment_method`):
+
+```shell
+python analyze_ablations.py --group env.assignment_method --sweep-id "multirun/YYYY-MM-DD/HH-MM-SS"
+```
+
+This prints mean/std for the tracked metrics and writes a `runs.csv` at the repository root.
+
+#### Charts
+
+To create a chart from the latest `runs.csv` use:
+
+```shell
+python scripts/plot_runs_csv.py --csv runs.csv --group algo.lr
+```
+
+You can also pass `--title` to override the figure title, and `--exclude-reward` to plot only evaluation metrics.
+
+
+This writes a PNG under `docs/charts/` (default: `docs/charts/ablation_algo.lr.png`).
+
+Example ablation plot:
+
+![Learning-rate ablation example](docs/charts/ablation_algo.lr.png)
+
+Notes:
+- The arrows next to subplot titles indicate direction of better: `↓` lower is better, `↑` higher is better.
+
+### Reproducibility pack
+
+**Hydra configs (experiments + sweeps)**
+
+- `configs/experiment/default_exp.yaml`
+- `configs/experiment/sweep_lr.yaml`
+- `configs/experiment/sweep_assign.yaml`
+- `configs/env/formation.yaml`
+- `configs/algo/ppo.yaml`
+- `configs/base/main_setup.yaml`
+
+**Dockerfile (build + run)**
+
+Build:
+
+```shell
+docker build -f docker/Dockerfile -t formation-task .
+```
+
+Run training in the container:
+
+```shell
+docker run --rm formation-task
+```
+
+If you want to avoid W&B login inside Docker, run in offline mode:
+
+```shell
+docker run --rm -e WANDB_MODE=offline formation-task
+```
+
+**Unit / smoke tests**
+
+Tests cover environment initialization/reset/step, SDF sanity check, assignment behavior, and PPO actor output.
+
+- Run with pytest:
+
+```shell
+pytest -q
+```
+
+- Or run unittest discovery:
+
+```shell
+python -m unittest discover -s test
+```
+
 ## Running tests
 
 ```shell
@@ -242,3 +378,13 @@ python -m unittest discover -s test
 - Support for multi-shape scenes
 - Support for dynamic reconfiguration mid-episode (even with multi-shape scenes)
 - Fixing the tests and CI/CD pipelines
+
+### Sipos Richard
+
+- Implementation of evaluation metrics (Boundary Error / Collisions / Uniformity) + unit tests
+- Hydra multirun support for sweeps and reproducibility
+- Sweep configurations for learning-rate and assignment-method ablations
+- Ablation analysis producing aggregated metrics + saving results to CSV
+- Plotting script to visualize differences between ablations
+- Docker packaging fixes (build context / run command / large-folder issues)
+- Windows-specific test fixes

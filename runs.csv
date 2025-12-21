@@ -1,0 +1,10 @@
+run_dir,algo.lr,base.seed,Evaluation/Boundary_Error_Mean,Evaluation/Boundary_Error_Max,Evaluation/Collision_Rate_Pct,Evaluation/Uniformity_Coefficient,Reward/MeanRewardInBatch
+D:\University\Msc\III. semester\Collective II. Assignment\student-formation\wandb\run-20251220_231756-u846j2sf,0.01,0,3.5710386991500855,6.957829093933105,0,0.20914298570837486,0.9740138649940491
+D:\University\Msc\III. semester\Collective II. Assignment\student-formation\wandb\run-20251220_232053-1bi1rlye,0.001,0,3.5837151765823365,7.058529663085937,0,0.19822883126286162,0.9289817214012146
+D:\University\Msc\III. semester\Collective II. Assignment\student-formation\wandb\run-20251220_232348-gdwxdpid,0.0001,0,3.5571483612060546,6.857301807403564,0,0.2905653558817006,0.6227067112922668
+D:\University\Msc\III. semester\Collective II. Assignment\student-formation\wandb\run-20251220_232632-894dzw7w,0.01,1,3.5198699712753294,6.9374720573425295,0.35155555555555557,0.8033715232355366,0.5846421122550964
+D:\University\Msc\III. semester\Collective II. Assignment\student-formation\wandb\run-20251220_232926-2cov740h,0.001,1,3.588110828399658,6.951930046081543,0,0.2574504452596168,0.8290022611618042
+D:\University\Msc\III. semester\Collective II. Assignment\student-formation\wandb\run-20251220_233253-n0gpy9oz,0.0001,1,3.565788745880127,6.91406831741333,0,0.35682341726111416,0.5598413944244385
+D:\University\Msc\III. semester\Collective II. Assignment\student-formation\wandb\run-20251220_233610-lu9aydvp,0.01,2,3.580729842185974,6.9857017517089846,0,0.19981077860634827,0.9746223092079163
+D:\University\Msc\III. semester\Collective II. Assignment\student-formation\wandb\run-20251220_233922-7115xbsw,0.001,2,3.5390873908996583,6.959300088882446,0,0.21371799637521316,0.9369615316390991
+D:\University\Msc\III. semester\Collective II. Assignment\student-formation\wandb\run-20251220_234233-3ueffvkw,0.0001,2,3.5190199851989745,6.577219915390015,0.0017777777777777779,0.32815718080656076,0.5221844911575317
