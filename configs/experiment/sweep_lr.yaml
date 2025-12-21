@@ -1,0 +1,14 @@
+# @package _global_
+# Multi-run configuration file
+# Ablation: PPO learning rate
+
+defaults:
+  - default_exp
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      base.seed: 0,1,2
+      env.assignment_method: hungarian
+      algo.lr: 1e-4,3e-4,5e-4

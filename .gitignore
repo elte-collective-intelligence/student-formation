@@ -56,4 +56,5 @@ __pycache__/
 # logs/outputs
 logs/
 outputs/
+multirun/
 wandb/
