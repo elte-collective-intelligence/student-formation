@@ -7,11 +7,16 @@ arena_size: 10
 max_steps: 5000
 
 # -------- SHAPE ----------
-shape_type: multishape  # Options: "circle", "polygon", "star", "multishape"
+shape_type: multishape  # Options: "circle", "ellipse", "polygon", "star", "multishape"
 
 circle:
   center: [0.0, 0.0]
   radius: 2.0
+
+ellipse:
+  center: [0.0, 0.0]
+  semi_axis_x: 2.5
+  semi_axis_y: 1.5
 
 polygon:
   vertices: 
@@ -51,6 +56,12 @@ reconfig_shape:
       agent_count: 5
 
 # -------- OBSERVATIONS ----------
+use_sdf_obs: true
+knn_k: 3
+radial_velocity_penalty_weight: 0.12
+reconfig_success_threshold: 0.12
+reconfig_success_hold: 5
+
 obs_keys_for_actor:
   - observation
 

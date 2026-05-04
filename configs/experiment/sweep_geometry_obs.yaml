@@ -1,0 +1,11 @@
+# @package _global_
+# Ablation: SDF / geometry features in observation (PDF geometry signal ablation)
+defaults:
+  - default_exp
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      base.seed: 0,1,2
+      env.use_sdf_obs: true,false

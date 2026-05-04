@@ -1,23 +1,27 @@
+import argparse as _argparse
+
+_orig_add_argument = _argparse.ArgumentParser.add_argument
+
+
+def _add_argument_coerce_help(self, *args, **kwargs):
+    h = kwargs.get("help")
+    if h is not None and not isinstance(h, str):
+        kwargs["help"] = str(h)
+    return _orig_add_argument(self, *args, **kwargs)
+
+
+_argparse.ArgumentParser.add_argument = _add_argument_coerce_help
+
 import hydra
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 import torch
-import time
 import os
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from tensordict.nn import TensorDictSequential
+from matplotlib.patches import Ellipse as MplEllipse
 from torchrl.envs.utils import step_mdp
-from torchrl.collectors import SyncDataCollector
-from torchrl.data.replay_buffers import ReplayBuffer
-from torchrl.data.replay_buffers.storages import LazyTensorStorage
-from torchrl.objectives import ClipPPOLoss
-from torchrl.objectives.value import GAE
-from torch.utils.tensorboard import SummaryWriter
-import tqdm
-import tensordict
 import glob
 
-# Imports assuming main.py is in the root, and src is a package in the root
 from src.envs.env import FormationEnv
 from src.agents.ppo_agent import create_ppo_actor_critic
 from src.envs.shapes import make_star_vertices
@@ -28,14 +32,12 @@ def generate_formation_gif(
 ):
     fig, ax = plt.subplots(figsize=(6, 6))
 
-    # Store active patches to remove them later
     current_patches = []
 
     def get_shape_patches(config_source):
         """Generates a list of Matplotlib artists from a config block."""
         patches = []
 
-        # Normalize: if it's a single shape, wrap it in a list so we can iterate
         if config_source.shape_type == "multishape":
             shape_configs = config_source.multishape
         else:
@@ -49,6 +51,9 @@ def generate_formation_gif(
             elif config_source.shape_type == "star":
                 shape_configs = [config_source.star]
                 shape_configs[0]["type"] = "star"
+            elif config_source.shape_type == "ellipse":
+                shape_configs = [config_source.ellipse]
+                shape_configs[0]["type"] = "ellipse"
 
         for s in shape_configs:
             if s.type == "circle":
@@ -77,9 +82,19 @@ def generate_formation_gif(
                     verts, closed=True, color="r", fill=False, linestyle="--", alpha=0.3
                 )
                 patches.append(p)
+            elif s.type == "ellipse":
+                p = MplEllipse(
+                    tuple(s.center),
+                    width=float(s.semi_axis_x) * 2,
+                    height=float(s.semi_axis_y) * 2,
+                    fill=False,
+                    edgecolor="r",
+                    linestyle="--",
+                    alpha=0.3,
+                )
+                patches.append(p)
         return patches
 
-    # Setup Scatters
     scat_agents = ax.scatter([], [], s=100, c="blue", label="Agents", zorder=5)
     scat_targets = ax.scatter(
         [], [], s=50, c="green", marker="x", label="Targets", zorder=4
@@ -112,7 +127,7 @@ def generate_formation_gif(
             ):
                 source = cfg.env.reconfig_shape
             else:
-                source = cfg.env  # Initial state
+                source = cfg.env
 
             new_patches = get_shape_patches(source)
             for p in new_patches:
@@ -134,25 +149,19 @@ def generate_formation_gif(
 def main(cfg: DictConfig) -> None:
     os.chdir(hydra.utils.get_original_cwd())
 
-    # print(OmegaConf.to_yaml(cfg))
-
     device = torch.device(cfg.base.device)
     torch.manual_seed(cfg.base.seed)
 
-    # Create environment
     env = FormationEnv(cfg, device=device)
 
-    # Create PPO model
-    actor, critic = create_ppo_actor_critic(cfg, env)
+    actor, _critic = create_ppo_actor_critic(cfg, env)
 
-    # Select the model from wandb
     model_path = "./wandb/latest-run/files/models/actor_network.pt"
     if os.path.exists(model_path):
         print(f"Loading model from: {model_path}")
         state_dict = torch.load(model_path, map_location=device)
         actor.load_state_dict(state_dict)
     else:
-        # Load a trained model from wandb, if latest-run does not exist
         run_dirs = glob.glob(os.path.join("wandb", "run-*"))
         latest_run = max(run_dirs, key=os.path.getmtime, default="42")
         if latest_run == "42":
@@ -163,33 +172,26 @@ def main(cfg: DictConfig) -> None:
             state_dict = torch.load(model_path, map_location=device)
             actor.load_state_dict(state_dict)
 
-    # Evaluation + Logging positions
-    positions_over_time = []
-    # Reset environment
     td = env.reset()
     print("Initial agent positions:", env.agent_positions)
 
-    # Run loop until any agent is done, or max_steps reached
     positions_over_time = []
     target_pos_log = []
     with torch.no_grad():
-        frames = 400  # increase if needed
+        frames = 400
         for i in range(frames):
             actor(td)
             td["action"] = td["loc"]
             td = env.step(td)
 
-            # Log both agents and their assigned targets
             positions_over_time.append(env.agent_positions.cpu().numpy().tolist())
             target_pos_log.append(env.assigned_target_positions.cpu().numpy().tolist())
 
-            # Normalize step (this solves visualization for now)
             td = step_mdp(td)
 
             if td["done"].any():
                 break
 
-    # Save GIF
     output_path = os.path.join(os.getcwd(), "formation.gif")
     print(f"Collected {len(positions_over_time)} frames")
     generate_formation_gif(

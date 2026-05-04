@@ -1,17 +1,31 @@
+import argparse as _argparse
+
+_orig_add_argument = _argparse.ArgumentParser.add_argument
+
+
+def _add_argument_coerce_help(self, *args, **kwargs):
+    h = kwargs.get("help")
+    if h is not None and not isinstance(h, str):
+        kwargs["help"] = str(h)
+    return _orig_add_argument(self, *args, **kwargs)
+
+
+_argparse.ArgumentParser.add_argument = _add_argument_coerce_help
+
 import hydra
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 import torch
 import time
-from pathlib import Path  # For model saving
-import wandb  # For W&B integration
+from pathlib import Path
+import wandb
 
 from torchrl.collectors import SyncDataCollector
 from torchrl.objectives import ClipPPOLoss
 from torchrl.objectives.value import GAE
 from torch.utils.tensorboard import SummaryWriter
 import tqdm
-import numpy as np  # For reward averaging in early stopping
+import numpy as np
 
 from src.envs.env import FormationEnv
 from src.agents.ppo_agent import create_ppo_actor_critic
@@ -22,12 +36,10 @@ from src.rollout.evaluator import evaluate_with_metrics
     version_base=None, config_path="configs", config_name="experiment/default_exp"
 )
 def main(cfg: DictConfig) -> None:
-    # Initialize W&B
     run_name = f"run_{time.strftime('%Y%m%d-%H%M%S')}_{cfg.env.shape_type}"
     if cfg.env.shape_type == "circle":
         run_name += f"_r{cfg.env.circle.radius}"
 
-    # When running Hydra MULTIRUN, save the Hydra sweep_id and job_num into W&B config from the Hydra runtime metadata.
     sweep_id = None
     sweep_job_num = None
     mode_value = HydraConfig.get().mode if HydraConfig.initialized() else None
@@ -41,7 +53,6 @@ def main(cfg: DictConfig) -> None:
     if sweep_job_num is not None:
         run_name += f"_job{sweep_job_num}"
 
-    # Save the config to W&B
     wandb_config = OmegaConf.to_container(cfg, resolve=False, throw_on_missing=True)
     if sweep_id is not None:
         wandb_config.setdefault("base", {})
@@ -64,27 +75,9 @@ def main(cfg: DictConfig) -> None:
     if device == torch.device("cuda") and torch.cuda.is_available():
         torch.cuda.manual_seed_all(cfg.base.seed)
 
-    # Environment
     proof_env_instance = FormationEnv(cfg=cfg, device=device)
-    proof_env_td = proof_env_instance.reset()
+    proof_env_instance.reset()
     print(f"Proof env batch_size after reset: {proof_env_instance.batch_size}")
-    # print(f"Initial observation from proof_env:
-    # {proof_env_td['observation']}") # For debugging
-
-    # --- Quick Test of Rendering (Optional - uncomment to test) ---
-    # if cfg.get("test_render_on_start", False):
-    #     print("Testing rendering...")
-    #     for _ in range(5): # Render a few frames of initial random state
-    #         proof_env_instance.render(mode="human")
-    #         time.sleep(0.1)
-    #     # To render a few steps:
-    #     # for _ in range(20):
-    #     #     actions = proof_env_instance.action_spec.rand() # Random actions
-    #     #     action_td = TensorDict({"action": actions}, batch_size=proof_env_instance.batch_size)
-    #     #     proof_env_instance.step(action_td)
-    #     #     proof_env_instance.render(mode="human")
-    #     # proof_env_instance.close() # Close after test if you want to exit
-    #     # print("Render test finished.")
 
     def create_env_fn_for_collector():
         return FormationEnv(cfg=cfg, device=device)
@@ -99,7 +92,6 @@ def main(cfg: DictConfig) -> None:
         frames_per_batch=cfg.algo.frames_per_batch,
         total_frames=cfg.algo.total_frames,
         device=device,
-        # Ensure trajectories don't exceed max_steps
         max_frames_per_traj=proof_env_instance.max_steps,
     )
 
@@ -107,10 +99,12 @@ def main(cfg: DictConfig) -> None:
         actor=actor_network,
         critic=value_network,
         clip_epsilon=cfg.algo.clip_epsilon,
-        entropy_coef=cfg.algo.entropy_coef,
-        value_loss_coef=cfg.algo.value_loss_coef,
-        # normalize_advantage=True, # Consider adding this if advantages are
-        # unstable
+        entropy_coeff=float(
+            cfg.algo.get("entropy_coeff", cfg.algo.get("entropy_coef", 0.001))
+        ),
+        critic_coeff=float(
+            cfg.algo.get("critic_coeff", cfg.algo.get("value_loss_coef", 0.5))
+        ),
     )
     loss_module = loss_module.to(device)
 
@@ -160,22 +154,19 @@ def main(cfg: DictConfig) -> None:
             entropy_loss = loss_td["loss_entropy"]
             total_loss = actor_objective_loss + critic_loss + entropy_loss
 
-            # Safety check for NaN or Inf losses
             if torch.isnan(total_loss) or torch.isinf(total_loss):
                 print(
                     f"WARNING: Skipped batch with NaN loss! Actor: {actor_objective_loss.item()}, Critic: {critic_loss.item()}"
                 )
-                continue  # Skip backward pass
+                continue
 
             optimizer.zero_grad()
             total_loss.backward()
-            # Optional: Gradient clipping
             grad_norm = torch.nn.utils.clip_grad_norm_(
                 loss_module.parameters(), max_norm=cfg.algo.get("max_grad_norm", 0.5)
             )
             optimizer.step()
 
-            # Safety check for NaN gradients
             if torch.isnan(grad_norm):
                 print("WARNING: Skipped update with NaN gradients!")
                 continue
@@ -200,15 +191,13 @@ def main(cfg: DictConfig) -> None:
                 "Loss/Critic": avg_critic_loss_iter,
                 "Loss/Entropy": avg_entropy_loss_iter,
                 "Loss/Total": avg_total_loss_iter,
-                "Reward/MeanRewardInBatch": mean_reward_in_batch,  # Log this mean
+                "Reward/MeanRewardInBatch": mean_reward_in_batch,
                 "Progress/Iteration": i,
-                # "LearningRate": optimizer.param_groups[0]['lr'], # If using LR scheduler
             }
-            # TensorBoard
             for key, value in log_payload.items():
                 if (
                     "Loss/" in key or "Reward/" in key
-                ):  # Only log numericals to TB scalar
+                ):
                     writer.add_scalar(key, value, collected_frames)
 
             wandb.log(log_payload, step=collected_frames)
@@ -244,7 +233,6 @@ def main(cfg: DictConfig) -> None:
     collector.shutdown()
     writer.close()
 
-    # Call evaluation with metrics
     print("Evaluate trained policy with formation metrics")
 
     try:
@@ -280,6 +268,9 @@ def main(cfg: DictConfig) -> None:
                 "Evaluation/Collision_Rate_Pct": aggregated_metrics.get(
                     "collision_rate_pct", 0
                 ),
+                "Evaluation/Reconfiguration_Time_Mean": aggregated_metrics.get(
+                    "reconfiguration_time_mean", float("nan")
+                ),
             }
         )
 
@@ -287,9 +278,6 @@ def main(cfg: DictConfig) -> None:
         print(f"Evaluation with metrics failed: {e}")
 
     if proof_env_instance is not None:
-        # Check if the render test might have already closed it and nulled pygame
-        # This depends on how render test close is handled; for now, just call
-        # close.
         try:
             proof_env_instance.close()
         except Exception as e:
