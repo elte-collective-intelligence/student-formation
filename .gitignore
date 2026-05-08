@@ -58,3 +58,5 @@ logs/
 outputs/
 multirun/
 wandb/
+
+submission/
