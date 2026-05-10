@@ -8,6 +8,13 @@ from typing import Any
 
 import yaml
 
+try:
+    from wandb.proto.wandb_internal_pb2 import Record
+    from wandb.sdk.internal.datastore import DataStore
+except ImportError:
+    Record = None
+    DataStore = None
+
 
 @dataclass(frozen=True)
 class RunRecord:
@@ -42,6 +49,86 @@ def _find_wandb_runs(root: Path) -> list[RunRecord]:
         records.append(
             RunRecord(run_dir=files_dir.parent, config=config, summary=summary)
         )
+
+    records.extend(_find_wandb_datastore_runs(root))
+    return records
+
+
+def _json_loads_or_raw(value: str) -> Any:
+    try:
+        return json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return value
+
+
+def _record_update_key(update) -> str | None:
+    nested = list(update.nested_key)
+    if nested:
+        return ".".join(nested)
+    if update.key:
+        return update.key
+    return None
+
+
+def _flatten_plain_dict(cfg: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+
+    def rec(prefix: str, node: Any) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                rec(f"{prefix}.{key}" if prefix else str(key), value)
+        else:
+            out[prefix] = node
+
+    rec("", cfg)
+    return out
+
+
+def _find_wandb_datastore_runs(root: Path) -> list[RunRecord]:
+    if DataStore is None or Record is None:
+        return []
+
+    records: list[RunRecord] = []
+    for run_path in sorted(root.glob("wandb/offline-run-*/run-*.wandb")):
+        ds = DataStore()
+        try:
+            ds.open_for_scan(str(run_path))
+        except Exception:
+            continue
+
+        config: dict[str, Any] = {}
+        summary: dict[str, Any] = {}
+
+        while True:
+            try:
+                data = ds.scan_data()
+            except Exception:
+                break
+            if data is None:
+                break
+
+            record = Record()
+            try:
+                record.ParseFromString(data)
+            except Exception:
+                continue
+
+            record_type = record.WhichOneof("record_type")
+            if record_type == "run":
+                raw_config: dict[str, Any] = {}
+                for update in record.run.config.update:
+                    raw_config[update.key] = _json_loads_or_raw(update.value_json)
+                config.update(_flatten_plain_dict(raw_config))
+            elif record_type == "summary":
+                for update in record.summary.update:
+                    key = _record_update_key(update)
+                    if key is not None:
+                        summary[key] = _json_loads_or_raw(update.value_json)
+
+        if config or summary:
+            records.append(
+                RunRecord(run_dir=run_path.parent, config=config, summary=summary)
+            )
 
     return records
 
