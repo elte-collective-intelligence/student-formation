@@ -11,7 +11,7 @@ This project implements a multi-agent reinforcement learning (MARL) system using
 
 ### Key Features
 
-- **Multiple Shape Support**: Circle, ellipse, polygon, and star formations with dynamic reconfiguration
+- **Multiple Shape Support**: Circle, Polygon, and Star formations with dynamic reconfiguration
 - **Assignment Strategies**: Hungarian and Greedy assignment strategies for optimal agent-target matching
 - **Reward Functions**: Support for both SDF-based (shape boundary) and assignment-based (target position) rewards
 - **Multi-Shape Scenes**: Agents can be assigned to multiple different shapes simultaneously
@@ -66,38 +66,7 @@ To train agents on a formation task, use:
 python main.py
 ```
 
-The default configuration uses the multishape + reconfiguration setup in `formation.yaml`. Output including training metrics and model checkpoints are logged to W&B.
-
-Quick smoke run (offline W&B, few frames):
-
-```shell
-WANDB_MODE=offline python main.py --config-name=experiment/smoke
-```
-
-### Experiment matrix (course-style runs)
-
-| Experiment | Config / command | What varies | Seeds (default) |
-|------------|------------------|-------------|-----------------|
-| Baseline training | `python main.py` | defaults in `experiment/default_exp` | `base.seed` in `main_setup` |
-| Assignment ablation | `python main.py -m -cn experiment/sweep_assign` | `env.assignment_method`: greedy, Hungarian | 0,1,2 |
-| Geometry-in-obs ablation | `python main.py -m -cn experiment/sweep_geometry_obs` | `env.use_sdf_obs`: true / false | 0,1,2 |
-| Learning rate (extra) | `python main.py -m -cn experiment/sweep_lr` | `algo.lr` | 0,1,2 |
-
-Use `analyze_ablations.py` with the Hydra `multirun/...` directory as in the Ablations section below. Commit configs and document seeds in your report.
-
-### Qualitative GIF
-
-After training, run `python visualize.py` (see Visualization section) to record a short rollout GIF for the report.
-
-### Submission ZIP
-
-From the repo root:
-
-```shell
-bash scripts/make_submission_zip.sh
-```
-
-This writes `formation-submission.zip` while excluding `.git`, venvs, large `outputs/`, `wandb/`, and `*.pt` checkpoints. Add figures and a PDF report locally if required, then refresh the ZIP.
+The default configuration trains agents to form a circle. Output including training metrics and model checkpoints are logged to W&B.
 
 ### Configuration
 
@@ -281,11 +250,10 @@ W&B keys (logged at the end of training):
 - `Evaluation/Boundary_Error_Mean`, `Evaluation/Boundary_Error_Max`, `Evaluation/Agents_On_Boundary_Pct`
 - `Evaluation/Uniformity_Mean`, `Evaluation/Uniformity_Std`, `Evaluation/Uniformity_Coefficient`
 - `Evaluation/Collision_Count_Mean`, `Evaluation/Collision_Rate_Pct`
-- `Evaluation/Reconfiguration_Time_Mean` (steps after `reconfig_step` until mean boundary error stays below `reconfig_success_threshold` for `reconfig_success_hold` consecutive steps; `nan` if not reached during eval horizon)
 
 ### Ablations
 
-Hydra multirun ablations under `configs/experiment/` include:
+Two Hydra multirun ablations are included under `configs/experiment/`.
 
 1) **Learning rate ablation** (`configs/experiment/sweep_lr.yaml`)
 
@@ -302,14 +270,6 @@ python main.py -m -cn experiment/sweep_assign
 ```
 
 This sweep fixes seeds (`base.seed: 0,1,2`) and varies `env.assignment_method` (`greedy,hungarian`).
-
-3) **Geometry / SDF observation ablation** (`configs/experiment/sweep_geometry_obs.yaml`, PDF-style)
-
-```shell
-python main.py -m -cn experiment/sweep_geometry_obs
-```
-
-This sweep fixes seeds (`base.seed: 0,1,2`) and toggles `env.use_sdf_obs` (`true,false`). When `false`, the actor only receives velocity, target offset, and kNN distances (no scalar SDF, normal, or tangent channels).
 
 Hydra writes sweep outputs under:
 
@@ -329,12 +289,6 @@ Assignment method sweep (group by `env.assignment_method`):
 
 ```shell
 python analyze_ablations.py --group env.assignment_method --sweep-id "multirun/YYYY-MM-DD/HH-MM-SS"
-```
-
-Geometry-in-observation sweep (group by `env.use_sdf_obs`):
-
-```shell
-python analyze_ablations.py --group env.use_sdf_obs --sweep-id "multirun/YYYY-MM-DD/HH-MM-SS"
 ```
 
 This prints mean/std for the tracked metrics and writes a `runs.csv` at the repository root.
@@ -366,8 +320,6 @@ Notes:
 - `configs/experiment/default_exp.yaml`
 - `configs/experiment/sweep_lr.yaml`
 - `configs/experiment/sweep_assign.yaml`
-- `configs/experiment/sweep_geometry_obs.yaml`
-- `configs/experiment/smoke.yaml`
 - `configs/env/formation.yaml`
 - `configs/algo/ppo.yaml`
 - `configs/base/main_setup.yaml`
