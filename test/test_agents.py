@@ -10,6 +10,7 @@ class TestPPOAgent(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test."""
         self.device = torch.device("cpu")
+        # Create minimal config for testing
         self.cfg = OmegaConf.create(
             {
                 "env": {

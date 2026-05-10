@@ -1,9 +1,0 @@
-# @package _global_
-# Short run to verify training end-to-end (not for reporting).
-defaults:
-  - default_exp
-  - _self_
-
-algo:
-  total_frames: 8192
-  frames_per_batch: 1024

@@ -11,4 +11,4 @@ hydra:
     params:
       base.seed: 0,1,2
       env.assignment_method: hungarian
-      algo.lr: 1e-4,1e-3,1e-2
+      algo.lr: 1e-4,3e-4,5e-4
