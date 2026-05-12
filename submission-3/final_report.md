@@ -19,3 +19,5 @@ The final artefacts are:
 - `formation.gif`
 
 Verification: the test suite passed with `11 passed, 1 warning`. The warning is only a dependency deprecation warning from `pygame`, not a project failure.
+
+Experiment summaries, plots, and the rollout GIF are included here. Raw offline W&B logs are excluded from the ZIP because of size.
