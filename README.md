@@ -1,6 +1,34 @@
 # Formation: Multi-Agent Reinforcement Learning
 
+[![CI](https://github.com/elte-collective-intelligence/student-formation/actions/workflows/ci.yml/badge.svg)](https://github.com/elte-collective-intelligence/student-formation/actions/workflows/ci.yml)
+[![Docker](https://github.com/elte-collective-intelligence/student-formation/actions/workflows/docker.yml/badge.svg)](https://github.com/elte-collective-intelligence/student-formation/actions/workflows/docker.yml)
+[![codecov](https://codecov.io/gh/elte-collective-intelligence/student-formation/branch/main/graph/badge.svg)](https://codecov.io/gh/elte-collective-intelligence/student-formation)
+[![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC--BY--NC--ND%204.0-blue.svg)](LICENSE)
+
+---
+
 This repository implements a TorchRL/PPO multi-agent formation-control task for the Collective Intelligence assignment. The project extends the baseline circle task into a reproducible study with arbitrary shapes, multi-shape scenes, dynamic reconfiguration, assignment strategies, SDF-based observations/rewards, metrics, ablations, plots, and a rollout GIF.
+
+![Formation rollout](./formation.gif)
+
+---
+
+## Table of Contents
+
+1. [Features](#features)
+2. [Setup](#setup)
+3. [Training](#training)
+4. [Configuration](#configuration)
+5. [Experiments](#experiments)
+6. [Analysis](#analysis)
+7. [Visualization](#visualization)
+8. [Metrics](#metrics)
+9. [Tests](#tests)
+10. [Docker](#docker)
+11. [Work Distribution](#work-distribution)
+12. [Assignment Checklist](#assignment-checklist)
+
+---
 
 ## Features
 
