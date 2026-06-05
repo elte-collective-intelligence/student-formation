@@ -132,30 +132,7 @@ python scripts/plot_runs_csv.py --csv runs.csv --group env.assignment_method
 python scripts/plot_runs_csv.py --csv runs.csv --group env.use_sdf_obs
 ```
 
-The final summarized results, plots, and GIF are included in `submission-3/`. Raw offline W&B logs are excluded from the ZIP because of size.
-
-## Final Results
-
-Final artefacts:
-
-- `submission-3/final_report.md`
-- `submission-3/runs_assignment.csv`
-- `submission-3/runs_geometry_obs.csv`
-- `submission-3/chart_assignment.png`
-- `submission-3/chart_geometry_obs.png`
-- `submission-3/formation.gif`
-
-Assignment ablation summary:
-
-- Hungarian reduced mean boundary error from `3.651` to `3.189`.
-- Hungarian reduced collision rate from `22.21%` to `2.24%`.
-- Greedy had higher training reward, but much worse collisions.
-
-SDF observation ablation summary:
-
-- SDF observations reduced mean boundary error from `3.570` to `3.189`.
-- The no-SDF setting had zero collisions and higher reward in this run.
-- This shows a trade-off between boundary accuracy and collision/reward stability.
+`analyze_ablations.py` writes a summary `runs.csv`, and `scripts/plot_runs_csv.py` renders comparison charts from it. Per-cohort result writeups and artefacts live on the respective semester branches, not on `main`.
 
 ## Visualization
 
@@ -171,7 +148,7 @@ If the latest checkpoint was trained with `env.use_sdf_obs=false`, use:
 WANDB_MODE=offline python visualize.py env.use_sdf_obs=false
 ```
 
-The final GIF is included at `submission-3/formation.gif`.
+A sample rollout is included at `formation.gif`.
 
 ## Metrics
 
